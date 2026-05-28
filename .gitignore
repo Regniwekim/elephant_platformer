@@ -27,6 +27,9 @@ $RECYCLE.BIN/
 
 # Local editor settings
 .vscode/
+
+# Local documentation notes
+docs/
  
 # Mac
  
