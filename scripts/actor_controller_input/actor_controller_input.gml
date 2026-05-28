@@ -25,6 +25,16 @@ function actor_input_frame_normalize(_frame) {
         return actor_input_frame_create_empty(ActorInputSource.NONE, noone, 0);
     }
 
+    if (!variable_struct_exists(_frame, "run_pressed")) {
+        _frame.run_pressed = false;
+    }
+    if (!variable_struct_exists(_frame, "run_held")) {
+        _frame.run_held = false;
+    }
+    if (!variable_struct_exists(_frame, "run_released")) {
+        _frame.run_released = false;
+    }
+
     var _move_x = clamp(_frame.raw_move_x, -1, 1);
     var _move_y = clamp(_frame.raw_move_y, -1, 1);
     var _move_length = point_distance(0, 0, _move_x, _move_y);

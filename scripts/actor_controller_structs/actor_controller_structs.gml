@@ -66,6 +66,9 @@ function ActorInputFrame() constructor {
     jump_pressed = false;
     jump_held = false;
     jump_released = false;
+    run_pressed = false;
+    run_held = false;
+    run_released = false;
     slide_pressed = false;
     slide_held = false;
     slide_released = false;
