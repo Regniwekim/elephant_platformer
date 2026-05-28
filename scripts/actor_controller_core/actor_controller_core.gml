@@ -29,7 +29,7 @@ function actor_controller_create(_stats, _x, _y) {
 }
 
 /// @function actor_controller_update
-/// @description Runs the guide 4 controller update for movement, jump, terrain, and platform collision.
+/// @description Runs the guide 5 controller update for movement, jump, terrain, forces, and collision.
 /// @param {Struct} _actor Actor controller to update.
 /// @param {Struct} _input Input frame for this update.
 /// @returns {Struct} Updated actor controller.
@@ -43,14 +43,17 @@ function actor_controller_update(_actor, _input) {
     var _had_jump_buffer_on_step_start = _actor.jump_buffer_timer > 0;
     actor_controller_update_timers(_actor);
     actor_controller_try_start_drop_through(_actor);
+    actor_controller_update_forces(_actor);
     actor_controller_apply_platform_carry(_actor);
     actor_collision_try_unstuck(_actor);
     actor_controller_try_jump(_actor);
+    actor_controller_apply_external_forces(_actor);
     actor_controller_apply_movement_intent(_actor);
     actor_controller_apply_jump_cut(_actor);
     actor_controller_apply_gravity(_actor);
     actor_controller_apply_velocity_limits(_actor);
-    actor_collision_move_and_slide(_actor, _actor.hsp + _actor.external_hsp, _actor.vsp + _actor.external_vsp);
+    actor_controller_update_total_velocity(_actor);
+    actor_collision_move_and_slide(_actor, _actor.total_hsp, _actor.total_vsp);
     actor_controller_handle_landing(_actor);
     actor_controller_try_landing_buffered_jump(_actor, _had_jump_buffer_on_step_start);
     actor_controller_update_state(_actor);
@@ -100,6 +103,7 @@ function actor_controller_end_step(_actor) {
     _actor.water_current = clamp(_actor.water_current, 0, _actor.water_max);
     _actor.charge_amount = clamp(_actor.charge_amount, 0, 1);
     actor_controller_update_one_way_ignore(_actor);
+    actor_controller_update_total_velocity(_actor);
     _actor.step_index += 1;
 }
 
@@ -256,8 +260,9 @@ function actor_controller_apply_ground_movement(_actor) {
         var _target_hsp = _input_x * _target_speed;
         var _turning = actor_controller_is_reversing_horizontal(_actor.hsp, _input_x);
         var _accel = _turning ? _actor.stats.ground_turn_accel : _actor.stats.ground_accel;
+        var _control_scale = actor_controller_get_external_control_scale(_actor);
 
-        _actor.hsp = actor_controller_approach(_actor.hsp, _target_hsp, _accel * _surface_accel);
+        _actor.hsp = actor_controller_approach(_actor.hsp, _target_hsp, _accel * _surface_accel * _control_scale);
         _actor.facing = (_input_x < 0) ? ActorFacing.LEFT : ActorFacing.RIGHT;
         return;
     }
@@ -283,8 +288,9 @@ function actor_controller_apply_air_movement(_actor) {
         var _target_hsp = _input_x * _target_speed;
         var _turning = actor_controller_is_reversing_horizontal(_actor.hsp, _input_x);
         var _accel = _turning ? _actor.stats.air_turn_accel : _actor.stats.air_accel;
+        var _control_scale = actor_controller_get_external_control_scale(_actor);
 
-        _actor.hsp = actor_controller_approach(_actor.hsp, _target_hsp, _accel);
+        _actor.hsp = actor_controller_approach(_actor.hsp, _target_hsp, _accel * _control_scale);
         _actor.facing = (_input_x < 0) ? ActorFacing.LEFT : ActorFacing.RIGHT;
         return;
     }
@@ -437,6 +443,7 @@ function actor_controller_set_position(_actor, _x, _y) {
 function actor_controller_set_velocity(_actor, _hsp, _vsp) {
     _actor.hsp = _hsp;
     _actor.vsp = _vsp;
+    actor_controller_update_total_velocity(_actor);
 
     return _actor;
 }

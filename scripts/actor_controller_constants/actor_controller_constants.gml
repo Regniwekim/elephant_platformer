@@ -1,6 +1,6 @@
 /// @description Actor controller constants and default tuning macros.
 
-#macro ACTOR_CONTROLLER_VERSION "0.4.0"
+#macro ACTOR_CONTROLLER_VERSION "0.5.0"
 
 #macro ACTOR_DEBUG_DEFAULT false
 #macro ACTOR_DEBUG_DRAW_COLLISION_DEFAULT false
