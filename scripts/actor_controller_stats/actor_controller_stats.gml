@@ -25,7 +25,7 @@ function actor_stats_create_player_elephant() {
 }
 
 /// @function actor_stats_clone
-/// @description Creates a shallow copy of actor stats for controller ownership.
+/// @description Copies actor stats onto a fresh ActorStats baseline so omitted optional fields keep defaults.
 /// @param {Struct} _stats Stats to clone.
 /// @returns {Struct} Cloned actor stats, or default stats if the input is invalid.
 function actor_stats_clone(_stats) {
@@ -43,8 +43,26 @@ function actor_stats_clone(_stats) {
     return _clone;
 }
 
+/// @function actor_stats_get_optional
+/// @description Reads an optional stats field and returns a default when the field is absent.
+/// @param {Struct} _stats Stats struct to read.
+/// @param {String} _field_name Name of the optional field.
+/// @param {Any} _default_value Value to return when the field is missing.
+/// @returns {Any} Field value from stats or the provided default value.
+function actor_stats_get_optional(_stats, _field_name, _default_value) {
+    if (!is_struct(_stats)) {
+        return _default_value;
+    }
+
+    if (!variable_struct_exists(_stats, _field_name)) {
+        return _default_value;
+    }
+
+    return variable_struct_get(_stats, _field_name);
+}
+
 /// @function actor_stats_validate
-/// @description Performs placeholder validation for the minimum fields guide 0 needs.
+/// @description Performs placeholder validation for guide 0's minimum fields; optional fields are completed from defaults.
 /// @param {Struct} _stats Stats to validate.
 /// @returns {Bool} True when required foundation stat fields are present and usable.
 function actor_stats_validate(_stats) {

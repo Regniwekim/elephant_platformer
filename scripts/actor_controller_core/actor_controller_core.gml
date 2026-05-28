@@ -13,11 +13,11 @@ function actor_controller_create(_stats, _x, _y) {
     _actor.stats = actor_stats_clone(_stats_source);
     _actor.water_max = _actor.stats.water_max;
     _actor.water_current = _actor.stats.water_max;
-    _actor.debug_enabled = _actor.stats.debug_enabled;
-    _actor.debug_draw_collision = _actor.stats.debug_draw_collision;
-    _actor.debug_draw_probes = _actor.stats.debug_draw_probes;
-    _actor.debug_draw_vectors = _actor.stats.debug_draw_vectors;
-    _actor.debug_print_events = _actor.stats.debug_print_events;
+    _actor.debug_enabled = actor_stats_get_optional(_actor.stats, "debug_enabled", ACTOR_DEBUG_DEFAULT);
+    _actor.debug_draw_collision = actor_stats_get_optional(_actor.stats, "debug_draw_collision", ACTOR_DEBUG_DRAW_COLLISION_DEFAULT);
+    _actor.debug_draw_probes = actor_stats_get_optional(_actor.stats, "debug_draw_probes", ACTOR_DEBUG_DRAW_PROBES_DEFAULT);
+    _actor.debug_draw_vectors = actor_stats_get_optional(_actor.stats, "debug_draw_vectors", ACTOR_DEBUG_DRAW_VECTORS_DEFAULT);
+    _actor.debug_print_events = actor_stats_get_optional(_actor.stats, "debug_print_events", ACTOR_DEBUG_PRINT_EVENTS_DEFAULT);
 
     actor_controller_set_position(_actor, _x, _y);
     _actor.x_previous = _actor.x;
