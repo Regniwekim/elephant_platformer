@@ -200,7 +200,7 @@ function actor_controller_execute_jump(_actor) {
 }
 
 /// @function actor_controller_apply_platform_jump_inheritance
-/// @description Adds grounded moving platform velocity to a jump using actor stat multipliers.
+/// @description Adds grounded moving platform velocity to a jump through the external force layer.
 /// @param {Struct} _actor Actor controller executing a jump.
 /// @returns {Undefined} No return value.
 function actor_controller_apply_platform_jump_inheritance(_actor) {
@@ -230,9 +230,23 @@ function actor_controller_apply_platform_jump_inheritance(_actor) {
     var _inherit_y_up = actor_stats_get_optional(_actor.stats, "platform_inherit_y_up_multiplier", ACTOR_PLATFORM_INHERIT_Y_UP_MULTIPLIER_DEFAULT);
     var _inherit_y_down = actor_stats_get_optional(_actor.stats, "platform_inherit_y_down_multiplier", ACTOR_PLATFORM_INHERIT_Y_DOWN_MULTIPLIER_DEFAULT);
     var _platform_y_multiplier = (_platform_velocity_y < 0) ? _inherit_y_up : _inherit_y_down;
+    var _force_x = _platform_velocity_x * _inherit_x;
+    var _force_y = _platform_velocity_y * _platform_y_multiplier;
 
-    _actor.hsp += _platform_velocity_x * _inherit_x;
-    _actor.vsp += _platform_velocity_y * _platform_y_multiplier;
+    if ((abs(_force_x) <= ACTOR_EPSILON) && (abs(_force_y) <= ACTOR_EPSILON)) {
+        return;
+    }
+
+    actor_controller_add_force(_actor, actor_force_create(
+        ActorForceType.PLATFORM_CARRY,
+        _force_x,
+        _force_y,
+        1,
+        1,
+        0,
+        instance_exists(_actor.platform_object) ? _actor.platform_object : _actor.platform_inherit_object,
+        noone
+    ));
 }
 
 /// @function actor_controller_apply_jump_cut

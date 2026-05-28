@@ -33,6 +33,7 @@
     {"id":{"name":"actor_controller_core","path":"scripts/actor_controller_core/actor_controller_core.yy",},},
     {"id":{"name":"actor_controller_debug","path":"scripts/actor_controller_debug/actor_controller_debug.yy",},},
     {"id":{"name":"actor_controller_enums","path":"scripts/actor_controller_enums/actor_controller_enums.yy",},},
+    {"id":{"name":"actor_controller_forces","path":"scripts/actor_controller_forces/actor_controller_forces.yy",},},
     {"id":{"name":"actor_controller_input","path":"scripts/actor_controller_input/actor_controller_input.yy",},},
     {"id":{"name":"actor_controller_jump","path":"scripts/actor_controller_jump/actor_controller_jump.yy",},},
     {"id":{"name":"actor_controller_stats","path":"scripts/actor_controller_stats/actor_controller_stats.yy",},},

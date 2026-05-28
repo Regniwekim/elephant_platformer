@@ -106,7 +106,7 @@ function ActorInputFrame() constructor {
 }
 
 /// @function ActorForce
-/// @description Creates a placeholder external force entry for later force systems.
+/// @description Creates an external force entry for layered actor velocity.
 /// @returns {Struct} Empty actor force data.
 function ActorForce() constructor {
     type = ActorForceType.ADDITIVE;
@@ -114,6 +114,10 @@ function ActorForce() constructor {
     y = 0;
     duration_frames = 0;
     elapsed_frames = 0;
+    damping = 1;
+    control_reduction = 0;
+    source_id = noone;
+    metadata = noone;
     active = false;
 }
 
@@ -161,6 +165,9 @@ function ActorController() constructor {
     vsp = 0;
     external_hsp = 0;
     external_vsp = 0;
+    total_hsp = 0;
+    total_vsp = 0;
+    external_control_reduction = 0;
 
     state = ActorMoveState.AIRBORNE;
     state_previous = ActorMoveState.AIRBORNE;
@@ -204,6 +211,7 @@ function ActorController() constructor {
     one_way_ignore_object = noone;
 
     active_forces = [];
+    active_force_count = 0;
     contact_left = new ActorContactInfo();
     contact_right = new ActorContactInfo();
     contact_top = new ActorContactInfo();

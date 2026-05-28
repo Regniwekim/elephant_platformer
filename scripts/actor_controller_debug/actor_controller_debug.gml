@@ -74,6 +74,44 @@ function actor_controller_debug_spray_mode_name(_mode) {
     return "UNKNOWN";
 }
 
+/// @function actor_controller_debug_force_type_name
+/// @description Converts an ActorForceType enum value to readable debug text.
+/// @param {Real} _type ActorForceType enum value.
+/// @returns {String} Force type name for debug output.
+function actor_controller_debug_force_type_name(_type) {
+    switch (_type) {
+        case ActorForceType.ADDITIVE: return "ADDITIVE";
+        case ActorForceType.IMPULSE: return "IMPULSE";
+        case ActorForceType.OVERRIDE: return "OVERRIDE";
+        case ActorForceType.CONTINUOUS: return "CONTINUOUS";
+        case ActorForceType.PLATFORM_CARRY: return "PLATFORM_CARRY";
+        case ActorForceType.KNOCKBACK: return "KNOCKBACK";
+    }
+
+    return "UNKNOWN";
+}
+
+/// @function actor_controller_debug_force_text
+/// @description Converts one active force to compact debug text.
+/// @param {Struct} _force Force data to format.
+/// @param {Real} _index Force index in the active force array.
+/// @returns {String} Single-line force debug text.
+function actor_controller_debug_force_text(_force, _index) {
+    if (!is_struct(_force)) {
+        return "force " + string(_index) + ": invalid";
+    }
+
+    var _text = "force " + string(_index) + ": " + actor_controller_debug_force_type_name(_force.type);
+    _text += " vec: (" + actor_controller_debug_format_real(_force.x);
+    _text += ", " + actor_controller_debug_format_real(_force.y) + ")";
+    _text += " t: " + string(_force.elapsed_frames) + "/" + string(_force.duration_frames);
+    _text += " damp: " + actor_controller_debug_format_real(_force.damping);
+    _text += " ctrl: " + actor_controller_debug_format_real(_force.control_reduction);
+    _text += " src: " + actor_controller_debug_instance_text(_force.source_id);
+
+    return _text;
+}
+
 /// @function actor_controller_debug_print_state
 /// @description Draws foundation controller state and current input values.
 /// @param {Struct} _actor Actor controller to draw.
@@ -100,6 +138,8 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += "  prev: (" + actor_controller_debug_format_real(_actor.x_previous) + ", " + actor_controller_debug_format_real(_actor.y_previous) + ")\n";
     _text += "vel: (" + actor_controller_debug_format_real(_actor.hsp) + ", " + actor_controller_debug_format_real(_actor.vsp) + ")";
     _text += "  external: (" + actor_controller_debug_format_real(_actor.external_hsp) + ", " + actor_controller_debug_format_real(_actor.external_vsp) + ")\n";
+    _text += "total vel: (" + actor_controller_debug_format_real(_actor.total_hsp) + ", " + actor_controller_debug_format_real(_actor.total_vsp) + ")";
+    _text += "  control reduction: " + actor_controller_debug_format_real(_actor.external_control_reduction) + "\n";
     _text += "grounded: " + actor_controller_debug_bool_text(_actor.is_grounded);
     _text += "  physical: " + actor_controller_debug_bool_text(_actor.is_physically_grounded);
     _text += "  was: " + actor_controller_debug_bool_text(_actor.was_grounded) + "\n";
@@ -145,6 +185,13 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += "  charge: " + actor_controller_debug_format_real(_actor.charge_amount);
     _text += " timer: " + string(_actor.charge_timer);
     _text += " ready: " + actor_controller_debug_bool_text(_actor.charge_ready) + "\n";
+    _text += "forces active: " + string(_actor.active_force_count) + "\n";
+
+    if (is_array(_actor.active_forces)) {
+        for (var _force_index = 0; _force_index < array_length(_actor.active_forces); _force_index++) {
+            _text += actor_controller_debug_force_text(_actor.active_forces[_force_index], _force_index) + "\n";
+        }
+    }
 
     if (_has_input) {
         _text += "input frame: " + string(_input.frame_number);

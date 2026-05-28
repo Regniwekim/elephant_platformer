@@ -343,7 +343,7 @@ function actor_collision_move_x(_actor, _amount) {
 
         _result.blocked_x = true;
         _actor.hsp = 0;
-        _actor.external_hsp = 0;
+        actor_controller_clear_external_axis(_actor, true);
         break;
     }
 
@@ -389,7 +389,7 @@ function actor_collision_move_y(_actor, _amount) {
 
         _result.blocked_y = true;
         _actor.vsp = 0;
-        _actor.external_vsp = 0;
+        actor_controller_clear_external_axis(_actor, false);
         break;
     }
 
@@ -597,7 +597,7 @@ function actor_collision_snap_to_ground(_actor, _max_distance) {
 
     _actor.y = _target_y;
     _actor.vsp = min(_actor.vsp, 0);
-    _actor.external_vsp = min(_actor.external_vsp, 0);
+    actor_controller_clear_external_axis(_actor, false);
     _result.moved_y = _snap_y;
     _result.iterations = 1;
     _actor.collision_last_move_y += _snap_y;
