@@ -75,6 +75,9 @@ function actor_controller_begin_step(_actor, _input) {
     _actor.event_count = 0;
     _actor.platform_carry_x = 0;
     _actor.platform_carry_y = 0;
+    _actor.platform_inherit_object = noone;
+    _actor.platform_inherit_velocity_x = 0;
+    _actor.platform_inherit_velocity_y = 0;
     _actor.collision_ignore_object = noone;
 
     if (is_struct(_input)) {
@@ -171,6 +174,9 @@ function actor_controller_try_start_drop_through(_actor) {
     _actor.platform_object = noone;
     _actor.platform_velocity_x = 0;
     _actor.platform_velocity_y = 0;
+    _actor.platform_inherit_object = noone;
+    _actor.platform_inherit_velocity_x = 0;
+    _actor.platform_inherit_velocity_y = 0;
     _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
 
     var _nudge = ACTOR_ONE_WAY_DROP_NUDGE_DEFAULT;
@@ -208,6 +214,9 @@ function actor_controller_apply_platform_carry(_actor) {
     _actor.collision_ignore_object = noone;
     _actor.platform_carry_x = _result.moved_x;
     _actor.platform_carry_y = _result.moved_y;
+    _actor.platform_inherit_object = _platform;
+    _actor.platform_inherit_velocity_x = _velocity_x;
+    _actor.platform_inherit_velocity_y = _velocity_y;
 
     return _result;
 }

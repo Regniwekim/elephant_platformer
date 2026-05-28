@@ -197,6 +197,9 @@ function ActorController() constructor {
     platform_carry_x = 0;
     platform_carry_y = 0;
     platform_previous_object = noone;
+    platform_inherit_object = noone;
+    platform_inherit_velocity_x = 0;
+    platform_inherit_velocity_y = 0;
 
     one_way_ignore_object = noone;
 

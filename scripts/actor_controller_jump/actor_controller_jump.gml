@@ -188,6 +188,9 @@ function actor_controller_execute_jump(_actor) {
     _actor.is_physically_grounded = false;
     _actor.ground_object = noone;
     _actor.platform_object = noone;
+    _actor.platform_inherit_object = noone;
+    _actor.platform_inherit_velocity_x = 0;
+    _actor.platform_inherit_velocity_y = 0;
     _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
 
     actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
@@ -201,17 +204,35 @@ function actor_controller_execute_jump(_actor) {
 /// @param {Struct} _actor Actor controller executing a jump.
 /// @returns {Undefined} No return value.
 function actor_controller_apply_platform_jump_inheritance(_actor) {
-    if (!is_struct(_actor) || !instance_exists(_actor.platform_object)) {
+    if (!is_struct(_actor)) {
+        return;
+    }
+
+    var _platform_velocity_x = 0;
+    var _platform_velocity_y = 0;
+    var _has_platform_velocity = false;
+
+    if (instance_exists(_actor.platform_object)) {
+        _platform_velocity_x = _actor.platform_velocity_x;
+        _platform_velocity_y = _actor.platform_velocity_y;
+        _has_platform_velocity = true;
+    } else if (instance_exists(_actor.platform_inherit_object)) {
+        _platform_velocity_x = _actor.platform_inherit_velocity_x;
+        _platform_velocity_y = _actor.platform_inherit_velocity_y;
+        _has_platform_velocity = true;
+    }
+
+    if (!_has_platform_velocity) {
         return;
     }
 
     var _inherit_x = actor_stats_get_optional(_actor.stats, "platform_inherit_x_multiplier", ACTOR_PLATFORM_INHERIT_X_MULTIPLIER_DEFAULT);
     var _inherit_y_up = actor_stats_get_optional(_actor.stats, "platform_inherit_y_up_multiplier", ACTOR_PLATFORM_INHERIT_Y_UP_MULTIPLIER_DEFAULT);
     var _inherit_y_down = actor_stats_get_optional(_actor.stats, "platform_inherit_y_down_multiplier", ACTOR_PLATFORM_INHERIT_Y_DOWN_MULTIPLIER_DEFAULT);
-    var _platform_y_multiplier = (_actor.platform_velocity_y < 0) ? _inherit_y_up : _inherit_y_down;
+    var _platform_y_multiplier = (_platform_velocity_y < 0) ? _inherit_y_up : _inherit_y_down;
 
-    _actor.hsp += _actor.platform_velocity_x * _inherit_x;
-    _actor.vsp += _actor.platform_velocity_y * _platform_y_multiplier;
+    _actor.hsp += _platform_velocity_x * _inherit_x;
+    _actor.vsp += _platform_velocity_y * _platform_y_multiplier;
 }
 
 /// @function actor_controller_apply_jump_cut
