@@ -1,6 +1,6 @@
 /// @description MCP Server - TCP server management for GameMaker MCP Pro
 
-#macro MCP_ENABLED true
+#macro MCP_ENABLED false
 #macro :Debug MCP_ENABLED true
 
 #macro MCP_PORT 6705
