@@ -141,6 +141,38 @@ function actor_controller_try_jump(_actor) {
     return actor_controller_execute_jump(_actor);
 }
 
+/// @function actor_controller_try_landing_buffered_jump
+/// @description Retries buffered jump execution after landing contacts refresh, including the last pre-decrement buffer frame.
+/// @param {Struct} _actor Actor controller to update.
+/// @param {Bool} _had_jump_buffer_on_step_start True when jump buffer was active before this update decremented timers.
+/// @returns {Bool} True when a landing buffered jump executed.
+function actor_controller_try_landing_buffered_jump(_actor, _had_jump_buffer_on_step_start) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    if (_actor.was_grounded || !_actor.is_physically_grounded) {
+        return false;
+    }
+
+    var _restored_last_buffer_frame = false;
+    if (_actor.jump_buffer_timer <= 0) {
+        if (!_had_jump_buffer_on_step_start) {
+            return false;
+        }
+
+        _actor.jump_buffer_timer = 1;
+        _restored_last_buffer_frame = true;
+    }
+
+    var _jumped = actor_controller_try_jump(_actor);
+    if (!_jumped && _restored_last_buffer_frame) {
+        _actor.jump_buffer_timer = 0;
+    }
+
+    return _jumped;
+}
+
 /// @function actor_controller_execute_jump
 /// @description Applies jump velocity, consumes jump assists, clears physical grounded state, and records a jump event.
 /// @param {Struct} _actor Actor controller to update.

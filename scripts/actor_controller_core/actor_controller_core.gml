@@ -40,6 +40,7 @@ function actor_controller_update(_actor, _input) {
 
     actor_controller_begin_step(_actor, _input);
     actor_collision_try_unstuck(_actor);
+    var _had_jump_buffer_on_step_start = _actor.jump_buffer_timer > 0;
     actor_controller_update_timers(_actor);
     actor_controller_try_jump(_actor);
     actor_controller_apply_movement_intent(_actor);
@@ -48,6 +49,7 @@ function actor_controller_update(_actor, _input) {
     actor_controller_apply_velocity_limits(_actor);
     actor_collision_move_and_slide(_actor, _actor.hsp + _actor.external_hsp, _actor.vsp + _actor.external_vsp);
     actor_controller_handle_landing(_actor);
+    actor_controller_try_landing_buffered_jump(_actor, _had_jump_buffer_on_step_start);
     actor_controller_update_state(_actor);
     actor_controller_end_step(_actor);
 
