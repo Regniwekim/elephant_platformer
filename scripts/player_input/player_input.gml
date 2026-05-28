@@ -22,6 +22,10 @@ function player_input_build_frame(_source_id, _origin_x, _origin_y, _frame_numbe
     _frame.jump_held = keyboard_check(vk_space);
     _frame.jump_released = keyboard_check_released(vk_space);
 
+    _frame.run_pressed = keyboard_check_pressed(vk_control);
+    _frame.run_held = keyboard_check(vk_control);
+    _frame.run_released = keyboard_check_released(vk_control);
+
     _frame.slide_pressed = keyboard_check_pressed(vk_shift);
     _frame.slide_held = keyboard_check(vk_shift);
     _frame.slide_released = keyboard_check_released(vk_shift);

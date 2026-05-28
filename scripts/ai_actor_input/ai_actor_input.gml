@@ -51,6 +51,9 @@ function ai_actor_input_apply_intent(_frame, _intent) {
     ai_actor_input_copy_intent_field(_frame, _intent, "jump_pressed");
     ai_actor_input_copy_intent_field(_frame, _intent, "jump_held");
     ai_actor_input_copy_intent_field(_frame, _intent, "jump_released");
+    ai_actor_input_copy_intent_field(_frame, _intent, "run_pressed");
+    ai_actor_input_copy_intent_field(_frame, _intent, "run_held");
+    ai_actor_input_copy_intent_field(_frame, _intent, "run_released");
     ai_actor_input_copy_intent_field(_frame, _intent, "slide_pressed");
     ai_actor_input_copy_intent_field(_frame, _intent, "slide_held");
     ai_actor_input_copy_intent_field(_frame, _intent, "slide_released");

@@ -100,6 +100,104 @@ function actor_controller_consume_ground_coyote(_actor) {
     return true;
 }
 
+/// @function actor_controller_can_jump
+/// @description Reports whether the actor can execute a standard ground or coyote jump this update.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when jump input, ability, state, and grounded eligibility all allow a jump.
+function actor_controller_can_jump(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    if ((_actor.stats.abilities & ACTOR_ABILITY_JUMP) == 0) {
+        return false;
+    }
+
+    if (_actor.jump_buffer_timer <= 0) {
+        return false;
+    }
+
+    switch (_actor.state) {
+        case ActorMoveState.DEAD:
+        case ActorMoveState.LOCKED:
+        case ActorMoveState.STUNNED:
+        case ActorMoveState.MANTLE:
+        case ActorMoveState.LEDGE_GRAB:
+            return false;
+    }
+
+    return _actor.is_physically_grounded || actor_controller_can_use_ground_coyote(_actor);
+}
+
+/// @function actor_controller_try_jump
+/// @description Executes a standard jump when buffered input and eligibility are available.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Bool} True when a jump executed.
+function actor_controller_try_jump(_actor) {
+    if (!actor_controller_can_jump(_actor)) {
+        return false;
+    }
+
+    return actor_controller_execute_jump(_actor);
+}
+
+/// @function actor_controller_execute_jump
+/// @description Applies jump velocity, consumes jump assists, clears physical grounded state, and records a jump event.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Bool} True when jump velocity was applied.
+function actor_controller_execute_jump(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    actor_controller_consume_jump_buffer(_actor);
+    actor_controller_consume_ground_coyote(_actor);
+
+    var _jump_multiplier = actor_controller_get_surface_multiplier(_actor, "jump_multiplier");
+    _actor.vsp = _actor.stats.jump_speed * _jump_multiplier;
+    _actor.is_grounded = false;
+    _actor.is_physically_grounded = false;
+    _actor.ground_object = noone;
+    _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
+
+    actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
+    actor_controller_record_event(_actor, ActorControllerEvent.JUMP);
+
+    return true;
+}
+
+/// @function actor_controller_apply_jump_cut
+/// @description Shortens an active upward jump when jump is released early.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Undefined} No return value.
+function actor_controller_apply_jump_cut(_actor) {
+    if (!is_struct(_actor) || !is_struct(_actor.input)) {
+        return;
+    }
+
+    if (!_actor.input.jump_released || _actor.vsp >= 0) {
+        return;
+    }
+
+    var _cut_multiplier = clamp(_actor.stats.jump_cut_multiplier, 0, 1);
+    _actor.vsp *= _cut_multiplier;
+}
+
+/// @function actor_controller_handle_landing
+/// @description Detects physical ground contact transitions and records landing events.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Undefined} No return value.
+function actor_controller_handle_landing(_actor) {
+    if (!is_struct(_actor)) {
+        return;
+    }
+
+    if (!_actor.was_grounded && _actor.is_physically_grounded) {
+        _actor.vsp = 0;
+        actor_controller_record_event(_actor, ActorControllerEvent.LAND);
+    }
+}
+
 /// @function actor_controller_get_timer_stat
 /// @description Reads a non-negative frame timer value from actor stats.
 /// @param {Struct} _actor Actor controller with stats.

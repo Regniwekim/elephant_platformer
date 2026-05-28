@@ -144,6 +144,10 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
         _text += actor_controller_debug_bool_text(_input.jump_pressed) + "/";
         _text += actor_controller_debug_bool_text(_input.jump_held) + "/";
         _text += actor_controller_debug_bool_text(_input.jump_released) + "  ";
+        _text += "run p/h/r: ";
+        _text += actor_controller_debug_bool_text(_input.run_pressed) + "/";
+        _text += actor_controller_debug_bool_text(_input.run_held) + "/";
+        _text += actor_controller_debug_bool_text(_input.run_released) + "  ";
         _text += "slide p/h/r: ";
         _text += actor_controller_debug_bool_text(_input.slide_pressed) + "/";
         _text += actor_controller_debug_bool_text(_input.slide_held) + "/";
