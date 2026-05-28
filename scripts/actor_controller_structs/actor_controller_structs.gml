@@ -45,6 +45,14 @@ function ActorStats() constructor {
 
     water_max = ACTOR_WATER_MAX_DEFAULT;
     empty_spray_grace_frames = ACTOR_EMPTY_SPRAY_GRACE_FRAMES_DEFAULT;
+    spray_wide_cost = ACTOR_SPRAY_WIDE_COST_DEFAULT;
+    spray_wide_recoil = ACTOR_SPRAY_WIDE_RECOIL_DEFAULT;
+    spray_focused_cost = ACTOR_SPRAY_FOCUSED_COST_DEFAULT;
+    spray_focused_recoil = ACTOR_SPRAY_FOCUSED_RECOIL_DEFAULT;
+    spray_recoil_duration_frames = ACTOR_SPRAY_RECOIL_DURATION_FRAMES_DEFAULT;
+    spray_recoil_damping = ACTOR_SPRAY_RECOIL_DAMPING_DEFAULT;
+    spray_recoil_control_reduction = ACTOR_SPRAY_RECOIL_CONTROL_REDUCTION_DEFAULT;
+    water_refill_rate = ACTOR_WATER_REFILL_RATE_DEFAULT;
     spray_ground_lift_suppressed = ACTOR_SPRAY_GROUND_LIFT_SUPPRESS;
     ground_launch_charge_min = ACTOR_GROUND_LAUNCH_CHARGE_MIN_DEFAULT;
 
@@ -236,9 +244,12 @@ function ActorController() constructor {
     spray_origin_y = 0;
     spray_recoil_x = 0;
     spray_recoil_y = 0;
+    spray_empty_grace_timer = 0;
 
     water_current = ACTOR_WATER_MAX_DEFAULT;
     water_max = ACTOR_WATER_MAX_DEFAULT;
+    water_refill_active = false;
+    water_refill_frame = -1;
     charge_amount = 0;
     charge_timer = 0;
     charge_ready = false;

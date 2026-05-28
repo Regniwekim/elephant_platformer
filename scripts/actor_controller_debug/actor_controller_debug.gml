@@ -180,11 +180,15 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += string(_actor.wall_jump_lockout_timer) + "\n";
     _text += "spray: " + actor_controller_debug_spray_mode_name(_actor.spray_mode);
     _text += " active: " + actor_controller_debug_bool_text(_actor.spray_active);
-    _text += " aim: (" + actor_controller_debug_format_real(_actor.spray_aim_x) + ", " + actor_controller_debug_format_real(_actor.spray_aim_y) + ")\n";
+    _text += " aim: (" + actor_controller_debug_format_real(_actor.spray_aim_x) + ", " + actor_controller_debug_format_real(_actor.spray_aim_y) + ")";
+    _text += " recoil: (" + actor_controller_debug_format_real(_actor.spray_recoil_x) + ", " + actor_controller_debug_format_real(_actor.spray_recoil_y) + ")\n";
     _text += "water: " + actor_controller_debug_format_real(_actor.water_current) + "/" + actor_controller_debug_format_real(_actor.water_max);
+    _text += "  grace: " + string(_actor.spray_empty_grace_timer);
+    _text += "  refill: " + actor_controller_debug_bool_text(_actor.water_refill_active);
     _text += "  charge: " + actor_controller_debug_format_real(_actor.charge_amount);
     _text += " timer: " + string(_actor.charge_timer);
-    _text += " ready: " + actor_controller_debug_bool_text(_actor.charge_ready) + "\n";
+    _text += " ready: " + actor_controller_debug_bool_text(_actor.charge_ready);
+    _text += " over: " + actor_controller_debug_bool_text(_actor.charge_overready) + "\n";
     _text += "forces active: " + string(_actor.active_force_count) + "\n";
 
     if (is_array(_actor.active_forces)) {
@@ -292,5 +296,32 @@ function actor_controller_debug_draw_probes(_actor) {
         draw_line(_actor.x, _actor.y, _actor.x + _actor.ground_tangent_x * 24, _actor.y + _actor.ground_tangent_y * 24);
         draw_set_color(c_orange);
         draw_line(_actor.x, _actor.y, _actor.x + _actor.platform_carry_x * 8, _actor.y + _actor.platform_carry_y * 8);
+    }
+}
+
+/// @function actor_controller_debug_draw_spray
+/// @description Draws spray aim and recoil vectors when vector debug drawing is enabled.
+/// @param {Struct} _actor Actor controller to draw.
+/// @returns {Undefined} No return value.
+function actor_controller_debug_draw_spray(_actor) {
+    if (!is_struct(_actor) || !_actor.debug_enabled || !_actor.debug_draw_vectors) {
+        return;
+    }
+
+    var _origin_x = _actor.spray_origin_x;
+    var _origin_y = _actor.spray_origin_y;
+    var _aim_x = _origin_x + _actor.spray_aim_x * ACTOR_DEBUG_SPRAY_AIM_VECTOR_LENGTH_DEFAULT;
+    var _aim_y = _origin_y + _actor.spray_aim_y * ACTOR_DEBUG_SPRAY_AIM_VECTOR_LENGTH_DEFAULT;
+    var _recoil_x = _origin_x + _actor.spray_recoil_x * ACTOR_DEBUG_SPRAY_RECOIL_VECTOR_SCALE_DEFAULT;
+    var _recoil_y = _origin_y + _actor.spray_recoil_y * ACTOR_DEBUG_SPRAY_RECOIL_VECTOR_SCALE_DEFAULT;
+
+    draw_set_alpha(1);
+    draw_set_color(c_aqua);
+    draw_line(_origin_x, _origin_y, _aim_x, _aim_y);
+    draw_circle(_origin_x, _origin_y, ACTOR_DEBUG_SPRAY_ORIGIN_RADIUS_DEFAULT, false);
+
+    if (_actor.spray_active) {
+        draw_set_color(c_orange);
+        draw_line(_origin_x, _origin_y, _recoil_x, _recoil_y);
     }
 }

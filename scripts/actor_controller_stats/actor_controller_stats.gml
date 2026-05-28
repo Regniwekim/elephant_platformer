@@ -22,6 +22,7 @@ function actor_stats_create_player_elephant() {
     _stats.debug_enabled = true;
     _stats.debug_draw_collision = true;
     _stats.debug_draw_probes = true;
+    _stats.debug_draw_vectors = true;
 
     return _stats;
 }

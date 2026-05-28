@@ -11,8 +11,9 @@ function actor_controller_create(_stats, _x, _y) {
     var _actor = new ActorController();
 
     _actor.stats = actor_stats_clone(_stats_source);
-    _actor.water_max = _actor.stats.water_max;
-    _actor.water_current = _actor.stats.water_max;
+    _actor.water_max = max(0, _actor.stats.water_max);
+    _actor.water_current = _actor.water_max;
+    _actor.spray_mode = ((_actor.stats.abilities & ACTOR_ABILITY_SPRAY) != 0) ? ActorSprayMode.WIDE : ActorSprayMode.NONE;
     _actor.debug_enabled = actor_stats_get_optional(_actor.stats, "debug_enabled", ACTOR_DEBUG_DEFAULT);
     _actor.debug_draw_collision = actor_stats_get_optional(_actor.stats, "debug_draw_collision", ACTOR_DEBUG_DRAW_COLLISION_DEFAULT);
     _actor.debug_draw_probes = actor_stats_get_optional(_actor.stats, "debug_draw_probes", ACTOR_DEBUG_DRAW_PROBES_DEFAULT);
@@ -47,6 +48,7 @@ function actor_controller_update(_actor, _input) {
     actor_controller_apply_platform_carry(_actor);
     actor_collision_try_unstuck(_actor);
     actor_controller_try_jump(_actor);
+    actor_controller_update_spray(_actor);
     actor_controller_apply_external_forces(_actor);
     actor_controller_apply_movement_intent(_actor);
     actor_controller_apply_jump_cut(_actor);
@@ -100,8 +102,13 @@ function actor_controller_begin_step(_actor, _input) {
 /// @param {Struct} _actor Actor controller to finalize.
 /// @returns {Undefined} No return value.
 function actor_controller_end_step(_actor) {
+    _actor.water_max = max(0, _actor.water_max);
     _actor.water_current = clamp(_actor.water_current, 0, _actor.water_max);
     _actor.charge_amount = clamp(_actor.charge_amount, 0, 1);
+    _actor.spray_empty_grace_timer = max(0, floor(_actor.spray_empty_grace_timer));
+    if (_actor.water_refill_frame != _actor.step_index) {
+        _actor.water_refill_active = false;
+    }
     actor_controller_update_one_way_ignore(_actor);
     actor_controller_update_total_velocity(_actor);
     _actor.step_index += 1;
