@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"mcp_commands_audio_extended",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"mcp_commands_audio_extended",
+  "parent":{
+    "name":"mcp",
+    "path":"folders/mcp.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

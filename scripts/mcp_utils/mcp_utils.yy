@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"mcp_utils",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"mcp_utils",
+  "parent":{
+    "name":"mcp",
+    "path":"folders/mcp.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}

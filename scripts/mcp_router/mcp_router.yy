@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"mcp_router",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"mcp_router",
+  "parent":{
+    "name":"mcp",
+    "path":"folders/mcp.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
