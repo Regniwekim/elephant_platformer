@@ -77,7 +77,10 @@ function ActorInputFrame() constructor {
     charge_released = false;
     cancel_pressed = false;
     cancel_held = false;
+    cancel_released = false;
     drop_pressed = false;
+    drop_held = false;
+    drop_released = false;
 
     aim_x = 1;
     aim_y = 0;

@@ -17,8 +17,6 @@ function player_input_build_frame(_source_id, _origin_x, _origin_y, _frame_numbe
 
     _frame.raw_move_x = (_right ? 1 : 0) - (_left ? 1 : 0);
     _frame.raw_move_y = (_down ? 1 : 0) - (_up ? 1 : 0);
-    _frame.move_x = clamp(_frame.raw_move_x, -1, 1);
-    _frame.move_y = clamp(_frame.raw_move_y, -1, 1);
 
     _frame.jump_pressed = keyboard_check_pressed(vk_space);
     _frame.jump_held = keyboard_check(vk_space);
@@ -38,7 +36,10 @@ function player_input_build_frame(_source_id, _origin_x, _origin_y, _frame_numbe
 
     _frame.cancel_pressed = keyboard_check_pressed(vk_escape);
     _frame.cancel_held = keyboard_check(vk_escape);
+    _frame.cancel_released = keyboard_check_released(vk_escape);
     _frame.drop_pressed = keyboard_check_pressed(vk_down) || keyboard_check_pressed(ord("S"));
+    _frame.drop_held = _down;
+    _frame.drop_released = keyboard_check_released(vk_down) || keyboard_check_released(ord("S"));
 
     _frame.nozzle_prev_pressed = keyboard_check_pressed(ord("Q"));
     _frame.nozzle_next_pressed = keyboard_check_pressed(ord("E"));
@@ -47,17 +48,7 @@ function player_input_build_frame(_source_id, _origin_x, _origin_y, _frame_numbe
     _frame.raw_aim_x = mouse_x - _origin_x;
     _frame.raw_aim_y = mouse_y - _origin_y;
 
-    var _aim_length = point_distance(0, 0, _frame.raw_aim_x, _frame.raw_aim_y);
-    if (_aim_length > ACTOR_EPSILON) {
-        _frame.aim_x = _frame.raw_aim_x / _aim_length;
-        _frame.aim_y = _frame.raw_aim_y / _aim_length;
-    } else {
-        _frame.aim_x = 1;
-        _frame.aim_y = 0;
-    }
-
-    _frame.aim_angle = point_direction(0, 0, _frame.aim_x, _frame.aim_y);
     _frame.debug_toggle_pressed = keyboard_check_pressed(vk_f3);
 
-    return _frame;
+    return actor_input_frame_normalize(_frame);
 }
