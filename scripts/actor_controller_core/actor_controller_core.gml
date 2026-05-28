@@ -40,11 +40,11 @@ function actor_controller_update(_actor, _input) {
 
     actor_controller_begin_step(_actor, _input);
     actor_controller_update_one_way_ignore(_actor);
-    actor_controller_apply_platform_carry(_actor);
     actor_collision_try_unstuck(_actor);
     var _had_jump_buffer_on_step_start = _actor.jump_buffer_timer > 0;
     actor_controller_update_timers(_actor);
     actor_controller_try_start_drop_through(_actor);
+    actor_controller_apply_platform_carry(_actor);
     actor_controller_try_jump(_actor);
     actor_controller_apply_movement_intent(_actor);
     actor_controller_apply_jump_cut(_actor);
