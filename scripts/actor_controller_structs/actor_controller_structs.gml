@@ -29,6 +29,13 @@ function ActorStats() constructor {
     jump_speed = -6.0;
     jump_cut_multiplier = 0.45;
 
+    slope_max_angle = ACTOR_SLOPE_MAX_ANGLE_DEFAULT;
+    slope_snap_distance = ACTOR_SLOPE_SNAP_DISTANCE_DEFAULT;
+    slope_step_height = ACTOR_SLOPE_STEP_HEIGHT_DEFAULT;
+    platform_inherit_x_multiplier = ACTOR_PLATFORM_INHERIT_X_MULTIPLIER_DEFAULT;
+    platform_inherit_y_up_multiplier = ACTOR_PLATFORM_INHERIT_Y_UP_MULTIPLIER_DEFAULT;
+    platform_inherit_y_down_multiplier = ACTOR_PLATFORM_INHERIT_Y_DOWN_MULTIPLIER_DEFAULT;
+
     jump_buffer_frames = ACTOR_JUMP_BUFFER_FRAMES_DEFAULT;
     ground_coyote_frames = ACTOR_GROUND_COYOTE_FRAMES_DEFAULT;
     wall_coyote_frames = ACTOR_WALL_COYOTE_FRAMES_DEFAULT;
@@ -166,6 +173,9 @@ function ActorController() constructor {
     ground_normal_x = 0;
     ground_normal_y = -1;
     ground_angle = 0;
+    ground_tangent_x = 1;
+    ground_tangent_y = 0;
+    ground_slope_walkable = true;
     ground_object = noone;
 
     wall_left = false;
@@ -184,6 +194,11 @@ function ActorController() constructor {
     platform_object = noone;
     platform_velocity_x = 0;
     platform_velocity_y = 0;
+    platform_carry_x = 0;
+    platform_carry_y = 0;
+    platform_previous_object = noone;
+
+    one_way_ignore_object = noone;
 
     active_forces = [];
     contact_left = new ActorContactInfo();
@@ -200,6 +215,7 @@ function ActorController() constructor {
     collision_unstuck_succeeded = true;
     collision_unstuck_offset_x = 0;
     collision_unstuck_offset_y = 0;
+    collision_ignore_object = noone;
 
     spray_active = false;
     spray_mode = ActorSprayMode.NONE;

@@ -18,10 +18,6 @@ function actor_controller_update_timers(_actor) {
 
     actor_controller_update_jump_buffer(_actor);
     actor_controller_update_coyote_timers(_actor);
-
-    if (is_struct(_actor.input) && _actor.input.drop_pressed) {
-        _actor.drop_through_timer = actor_controller_get_timer_stat(_actor, "drop_through_frames", ACTOR_DROP_THROUGH_FRAMES_DEFAULT);
-    }
 }
 
 /// @function actor_controller_update_jump_buffer
@@ -187,15 +183,35 @@ function actor_controller_execute_jump(_actor) {
 
     var _jump_multiplier = actor_controller_get_surface_multiplier(_actor, "jump_multiplier");
     _actor.vsp = _actor.stats.jump_speed * _jump_multiplier;
+    actor_controller_apply_platform_jump_inheritance(_actor);
     _actor.is_grounded = false;
     _actor.is_physically_grounded = false;
     _actor.ground_object = noone;
+    _actor.platform_object = noone;
     _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
 
     actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
     actor_controller_record_event(_actor, ActorControllerEvent.JUMP);
 
     return true;
+}
+
+/// @function actor_controller_apply_platform_jump_inheritance
+/// @description Adds grounded moving platform velocity to a jump using actor stat multipliers.
+/// @param {Struct} _actor Actor controller executing a jump.
+/// @returns {Undefined} No return value.
+function actor_controller_apply_platform_jump_inheritance(_actor) {
+    if (!is_struct(_actor) || !instance_exists(_actor.platform_object)) {
+        return;
+    }
+
+    var _inherit_x = actor_stats_get_optional(_actor.stats, "platform_inherit_x_multiplier", ACTOR_PLATFORM_INHERIT_X_MULTIPLIER_DEFAULT);
+    var _inherit_y_up = actor_stats_get_optional(_actor.stats, "platform_inherit_y_up_multiplier", ACTOR_PLATFORM_INHERIT_Y_UP_MULTIPLIER_DEFAULT);
+    var _inherit_y_down = actor_stats_get_optional(_actor.stats, "platform_inherit_y_down_multiplier", ACTOR_PLATFORM_INHERIT_Y_DOWN_MULTIPLIER_DEFAULT);
+    var _platform_y_multiplier = (_actor.platform_velocity_y < 0) ? _inherit_y_up : _inherit_y_down;
+
+    _actor.hsp += _actor.platform_velocity_x * _inherit_x;
+    _actor.vsp += _actor.platform_velocity_y * _platform_y_multiplier;
 }
 
 /// @function actor_controller_apply_jump_cut

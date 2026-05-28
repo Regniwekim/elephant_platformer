@@ -108,6 +108,16 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += "  ceiling: " + actor_controller_debug_bool_text(_actor.ceiling_contact);
     _text += "  ground obj: " + actor_controller_debug_instance_text(_actor.ground_object);
     _text += "  wall obj: " + actor_controller_debug_instance_text(_actor.wall_object) + "\n";
+    _text += "ground angle: " + actor_controller_debug_format_real(_actor.ground_angle);
+    _text += " tangent: (" + actor_controller_debug_format_real(_actor.ground_tangent_x);
+    _text += ", " + actor_controller_debug_format_real(_actor.ground_tangent_y) + ")";
+    _text += " walkable: " + actor_controller_debug_bool_text(_actor.ground_slope_walkable) + "\n";
+    _text += "platform obj: " + actor_controller_debug_instance_text(_actor.platform_object);
+    _text += " vel: (" + actor_controller_debug_format_real(_actor.platform_velocity_x);
+    _text += ", " + actor_controller_debug_format_real(_actor.platform_velocity_y) + ")";
+    _text += " carry: (" + actor_controller_debug_format_real(_actor.platform_carry_x);
+    _text += ", " + actor_controller_debug_format_real(_actor.platform_carry_y) + ")";
+    _text += " one-way ignore: " + actor_controller_debug_instance_text(_actor.one_way_ignore_object) + "\n";
     _text += "contacts L/R/T/B: ";
     _text += actor_controller_debug_contact_text(_actor.contact_left) + " | ";
     _text += actor_controller_debug_contact_text(_actor.contact_right) + " | ";
@@ -226,4 +236,14 @@ function actor_controller_debug_draw_probes(_actor) {
     actor_controller_debug_draw_rect(_top, _actor.contact_top.active ? c_yellow : c_olive);
     actor_controller_debug_draw_rect(_left, _actor.contact_left.active ? c_red : c_maroon);
     actor_controller_debug_draw_rect(_right, _actor.contact_right.active ? c_red : c_maroon);
+
+    if (_actor.debug_draw_vectors && _actor.contact_bottom.active) {
+        draw_set_alpha(1);
+        draw_set_color(c_lime);
+        draw_line(_actor.x, _actor.y, _actor.x + _actor.ground_normal_x * 24, _actor.y + _actor.ground_normal_y * 24);
+        draw_set_color(c_yellow);
+        draw_line(_actor.x, _actor.y, _actor.x + _actor.ground_tangent_x * 24, _actor.y + _actor.ground_tangent_y * 24);
+        draw_set_color(c_orange);
+        draw_line(_actor.x, _actor.y, _actor.x + _actor.platform_carry_x * 8, _actor.y + _actor.platform_carry_y * 8);
+    }
 }

@@ -23,6 +23,8 @@
   "name":"elephant_platformer",
   "resources":[
     {"id":{"name":"obj_mcp_server","path":"objects/obj_mcp_server/obj_mcp_server.yy",},},
+    {"id":{"name":"obj_moving_platform","path":"objects/obj_moving_platform/obj_moving_platform.yy",},},
+    {"id":{"name":"obj_one_way_platform","path":"objects/obj_one_way_platform/obj_one_way_platform.yy",},},
     {"id":{"name":"obj_player","path":"objects/obj_player/obj_player.yy",},},
     {"id":{"name":"obj_solid","path":"objects/obj_solid/obj_solid.yy",},},
     {"id":{"name":"Room1","path":"rooms/Room1/Room1.yy",},},
@@ -36,6 +38,7 @@
     {"id":{"name":"actor_controller_stats","path":"scripts/actor_controller_stats/actor_controller_stats.yy",},},
     {"id":{"name":"actor_controller_state","path":"scripts/actor_controller_state/actor_controller_state.yy",},},
     {"id":{"name":"actor_controller_structs","path":"scripts/actor_controller_structs/actor_controller_structs.yy",},},
+    {"id":{"name":"actor_controller_surfaces","path":"scripts/actor_controller_surfaces/actor_controller_surfaces.yy",},},
     {"id":{"name":"ai_actor_input","path":"scripts/ai_actor_input/ai_actor_input.yy",},},
     {"id":{"name":"mcp_commands_alarm","path":"scripts/mcp_commands_alarm/mcp_commands_alarm.yy",},},
     {"id":{"name":"mcp_commands_analytics","path":"scripts/mcp_commands_analytics/mcp_commands_analytics.yy",},},
