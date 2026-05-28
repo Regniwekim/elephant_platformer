@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"actor_controller_collision",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"actor_controller_collision",
+  "parent":{
+    "name":"ActorController",
+    "path":"folders/ActorController.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
