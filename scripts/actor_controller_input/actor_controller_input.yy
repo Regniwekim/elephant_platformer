@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"actor_controller_input",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"actor_controller_input",
+  "parent":{
+    "name":"ActorController",
+    "path":"folders/ActorController.yy",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
