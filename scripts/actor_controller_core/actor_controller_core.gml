@@ -35,6 +35,7 @@ function actor_controller_create(_stats, _x, _y) {
 /// @returns {Struct} Updated actor controller.
 function actor_controller_update(_actor, _input) {
     actor_controller_begin_step(_actor, _input);
+    actor_controller_update_timers(_actor);
     actor_controller_end_step(_actor);
 
     return _actor;
@@ -56,7 +57,7 @@ function actor_controller_begin_step(_actor, _input) {
     _actor.event_count = 0;
 
     if (is_struct(_input)) {
-        _actor.input = _input;
+        _actor.input = actor_input_frame_normalize(_input);
     } else {
         _actor.input = actor_input_frame_create_empty(ActorInputSource.NONE, noone, _actor.step_index);
     }

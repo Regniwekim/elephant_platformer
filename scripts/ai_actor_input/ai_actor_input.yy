@@ -1,0 +1,13 @@
+{
+  "$GMScript":"v1",
+  "%Name":"ai_actor_input",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"ai_actor_input",
+  "parent":{
+    "name":"elephant_platformer",
+    "path":"elephant_platformer.yyp",
+  },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
+}
