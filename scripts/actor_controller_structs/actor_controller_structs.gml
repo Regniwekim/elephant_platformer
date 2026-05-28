@@ -159,6 +159,7 @@ function ActorController() constructor {
     is_grounded = false;
     is_physically_grounded = false;
     was_grounded = false;
+    ceiling_contact = false;
     ground_normal_x = 0;
     ground_normal_y = -1;
     ground_angle = 0;
@@ -168,6 +169,7 @@ function ActorController() constructor {
     wall_right = false;
     wall_normal_x = 0;
     wall_normal_y = 0;
+    wall_object = noone;
 
     jump_buffer_timer = 0;
     ground_coyote_timer = 0;
@@ -186,6 +188,15 @@ function ActorController() constructor {
     contact_top = new ActorContactInfo();
     contact_bottom = new ActorContactInfo();
     surface_info = new ActorSurfaceInfo();
+
+    collision_blocked_x = false;
+    collision_blocked_y = false;
+    collision_last_move_x = 0;
+    collision_last_move_y = 0;
+    collision_iterations = 0;
+    collision_unstuck_succeeded = true;
+    collision_unstuck_offset_x = 0;
+    collision_unstuck_offset_y = 0;
 
     spray_active = false;
     spray_mode = ActorSprayMode.NONE;

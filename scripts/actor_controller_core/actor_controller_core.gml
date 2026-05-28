@@ -29,12 +29,14 @@ function actor_controller_create(_stats, _x, _y) {
 }
 
 /// @function actor_controller_update
-/// @description Runs the guide 0 controller update shell without applying movement or collision.
+/// @description Runs the controller update shell and flat solid collision pass.
 /// @param {Struct} _actor Actor controller to update.
 /// @param {Struct} _input Input frame for this update.
 /// @returns {Struct} Updated actor controller.
 function actor_controller_update(_actor, _input) {
     actor_controller_begin_step(_actor, _input);
+    actor_collision_try_unstuck(_actor);
+    actor_collision_move_and_slide(_actor, _actor.hsp + _actor.external_hsp, _actor.vsp + _actor.external_vsp);
     actor_controller_update_timers(_actor);
     actor_controller_end_step(_actor);
 
@@ -50,7 +52,7 @@ function actor_controller_begin_step(_actor, _input) {
     _actor.x_previous = _actor.x;
     _actor.y_previous = _actor.y;
     _actor.state_previous = _actor.state;
-    _actor.was_grounded = _actor.is_grounded;
+    _actor.was_grounded = _actor.is_physically_grounded;
     _actor.input_previous = _actor.input;
 
     _actor.events = [];
