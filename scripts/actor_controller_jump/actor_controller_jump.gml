@@ -136,6 +136,12 @@ function actor_controller_can_jump(_actor) {
         case ActorMoveState.MANTLE:
         case ActorMoveState.LEDGE_GRAB:
             return false;
+
+        case ActorMoveState.SLIDE:
+            if (!actor_controller_can_jump_from_slide(_actor)) {
+                return false;
+            }
+            break;
     }
 
     return _actor.is_physically_grounded || actor_controller_can_use_ground_coyote(_actor);
@@ -191,6 +197,10 @@ function actor_controller_try_landing_buffered_jump(_actor, _had_jump_buffer_on_
 /// @returns {Bool} True when jump velocity was applied.
 function actor_controller_execute_jump(_actor) {
     if (!is_struct(_actor)) {
+        return false;
+    }
+
+    if (actor_controller_is_state(_actor, ActorMoveState.SLIDE) && !actor_controller_end_slide(_actor)) {
         return false;
     }
 

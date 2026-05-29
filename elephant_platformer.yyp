@@ -37,6 +37,7 @@
     {"id":{"name":"actor_controller_input","path":"scripts/actor_controller_input/actor_controller_input.yy",},},
     {"id":{"name":"actor_controller_jump","path":"scripts/actor_controller_jump/actor_controller_jump.yy",},},
     {"id":{"name":"actor_controller_ledge","path":"scripts/actor_controller_ledge/actor_controller_ledge.yy",},},
+    {"id":{"name":"actor_controller_slide","path":"scripts/actor_controller_slide/actor_controller_slide.yy",},},
     {"id":{"name":"actor_controller_spray","path":"scripts/actor_controller_spray/actor_controller_spray.yy",},},
     {"id":{"name":"actor_controller_stats","path":"scripts/actor_controller_stats/actor_controller_stats.yy",},},
     {"id":{"name":"actor_controller_state","path":"scripts/actor_controller_state/actor_controller_state.yy",},},

@@ -11,6 +11,8 @@ function actor_controller_create(_stats, _x, _y) {
     var _actor = new ActorController();
 
     _actor.stats = actor_stats_clone(_stats_source);
+    _actor.collision_height = max(ACTOR_EPSILON, _actor.stats.bbox_height);
+    _actor.slide_previous_collision_height = _actor.collision_height;
     _actor.water_max = max(0, _actor.stats.water_max);
     _actor.water_current = _actor.water_max;
     _actor.spray_mode = ((_actor.stats.abilities & ACTOR_ABILITY_SPRAY) != 0) ? ActorSprayMode.WIDE : ActorSprayMode.NONE;
@@ -56,8 +58,10 @@ function actor_controller_update(_actor, _input) {
     actor_collision_try_unstuck(_actor);
     actor_controller_try_wall_jump(_actor);
     actor_controller_try_jump(_actor);
+    actor_controller_try_slide(_actor);
     actor_controller_update_spray(_actor);
     actor_controller_apply_external_forces(_actor);
+    actor_controller_update_slide(_actor);
     actor_controller_apply_movement_intent(_actor);
     actor_controller_apply_jump_cut(_actor);
     actor_controller_apply_gravity(_actor);
@@ -258,6 +262,10 @@ function actor_controller_apply_platform_carry(_actor) {
 /// @returns {Undefined} No return value.
 function actor_controller_apply_movement_intent(_actor) {
     if (!is_struct(_actor)) {
+        return;
+    }
+
+    if (_actor.slide_active || actor_controller_is_state(_actor, ActorMoveState.SLIDE)) {
         return;
     }
 

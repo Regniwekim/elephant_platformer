@@ -41,6 +41,11 @@ function ActorStats() constructor {
     ledge_hang_top_offset = ACTOR_LEDGE_HANG_TOP_OFFSET_DEFAULT;
     ledge_mantle_frames = ACTOR_LEDGE_MANTLE_FRAMES_DEFAULT;
     ledge_regrab_lockout_frames = ACTOR_LEDGE_REGRAB_LOCKOUT_FRAMES_DEFAULT;
+    slide_min_entry_speed = ACTOR_SLIDE_MIN_ENTRY_SPEED_DEFAULT;
+    slide_friction = ACTOR_SLIDE_FRICTION_DEFAULT;
+    slide_exit_speed = ACTOR_SLIDE_EXIT_SPEED_DEFAULT;
+    slide_ceiling_clearance = ACTOR_SLIDE_CEILING_CLEARANCE_DEFAULT;
+    slide_jump_allowed = ACTOR_SLIDE_JUMP_ALLOWED_DEFAULT;
 
     slope_max_angle = ACTOR_SLOPE_MAX_ANGLE_DEFAULT;
     slope_snap_distance = ACTOR_SLOPE_SNAP_DISTANCE_DEFAULT;
@@ -195,6 +200,7 @@ function ActorController() constructor {
     y = 0;
     x_previous = 0;
     y_previous = 0;
+    collision_height = 0;
     hsp = 0;
     vsp = 0;
     external_hsp = 0;
@@ -248,6 +254,11 @@ function ActorController() constructor {
     mantle_end_y = 0;
     mantle_timer = 0;
     mantle_duration = ACTOR_LEDGE_MANTLE_FRAMES_DEFAULT;
+    slide_active = false;
+    slide_timer = 0;
+    slide_previous_collision_height = 0;
+    slide_stand_blocked = false;
+    slide_entry_speed = 0;
 
     jump_buffer_timer = 0;
     ground_coyote_timer = 0;
