@@ -37,6 +37,22 @@ function actor_controller_debug_contact_text(_contact) {
         + " d:" + actor_controller_debug_format_real(_contact.depth);
 }
 
+/// @function actor_controller_debug_ledge_candidate_text
+/// @description Converts a ledge candidate struct to compact debug text.
+/// @param {Struct} _candidate Ledge candidate data to format.
+/// @returns {String} Ledge candidate state text.
+function actor_controller_debug_ledge_candidate_text(_candidate) {
+    if (!is_struct(_candidate) || !_candidate.active) {
+        return "clear";
+    }
+
+    return "hit " + actor_controller_debug_instance_text(_candidate.object_id)
+        + " ledge: (" + actor_controller_debug_format_real(_candidate.ledge_x)
+        + ", " + actor_controller_debug_format_real(_candidate.ledge_y) + ")"
+        + " stand: (" + actor_controller_debug_format_real(_candidate.stand_x)
+        + ", " + actor_controller_debug_format_real(_candidate.stand_y) + ")";
+}
+
 /// @function actor_controller_debug_move_state_name
 /// @description Converts an ActorMoveState enum value to readable debug text.
 /// @param {Real} _state ActorMoveState enum value.
@@ -162,6 +178,15 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += "  ceiling: " + actor_controller_debug_bool_text(_actor.ceiling_contact);
     _text += "  ground obj: " + actor_controller_debug_instance_text(_actor.ground_object);
     _text += "  wall obj: " + actor_controller_debug_instance_text(_actor.wall_object) + "\n";
+    _text += "ledge obj: " + actor_controller_debug_instance_text(_actor.ledge_object);
+    _text += " candidate: " + actor_controller_debug_ledge_candidate_text(_actor.ledge_candidate);
+    _text += " coyote: " + actor_controller_debug_ledge_candidate_text(_actor.ledge_coyote_candidate) + "\n";
+    _text += "ledge hang: (" + actor_controller_debug_format_real(_actor.ledge_hang_x);
+    _text += ", " + actor_controller_debug_format_real(_actor.ledge_hang_y) + ")";
+    _text += " stand: (" + actor_controller_debug_format_real(_actor.ledge_stand_x);
+    _text += ", " + actor_controller_debug_format_real(_actor.ledge_stand_y) + ")";
+    _text += " mantle: " + string(_actor.mantle_timer) + "/" + string(_actor.mantle_duration);
+    _text += " state time: " + string(_actor.time_in_state) + "\n";
     _text += "ground angle: " + actor_controller_debug_format_real(_actor.ground_angle);
     _text += " tangent: (" + actor_controller_debug_format_real(_actor.ground_tangent_x);
     _text += ", " + actor_controller_debug_format_real(_actor.ground_tangent_y) + ")";
@@ -185,13 +210,14 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += " unstuck: " + actor_controller_debug_bool_text(_actor.collision_unstuck_succeeded);
     _text += " (" + actor_controller_debug_format_real(_actor.collision_unstuck_offset_x);
     _text += ", " + actor_controller_debug_format_real(_actor.collision_unstuck_offset_y) + ")\n";
-    _text += "timers jump/coyote/wall/ledge/drop/lock: ";
+    _text += "timers jump/coyote/wall/ledge/drop/wlock/llock: ";
     _text += string(_actor.jump_buffer_timer) + "/";
     _text += string(_actor.ground_coyote_timer) + "/";
     _text += string(_actor.wall_coyote_timer) + "/";
     _text += string(_actor.ledge_coyote_timer) + "/";
     _text += string(_actor.drop_through_timer) + "/";
-    _text += string(_actor.wall_jump_lockout_timer) + "\n";
+    _text += string(_actor.wall_jump_lockout_timer) + "/";
+    _text += string(_actor.ledge_grab_lockout_timer) + "\n";
     _text += "spray: " + actor_controller_debug_spray_mode_name(_actor.spray_mode);
     _text += " active: " + actor_controller_debug_bool_text(_actor.spray_active);
     _text += " aim: (" + actor_controller_debug_format_real(_actor.spray_aim_x) + ", " + actor_controller_debug_format_real(_actor.spray_aim_y) + ")";
@@ -311,6 +337,22 @@ function actor_controller_debug_draw_probes(_actor) {
     actor_controller_debug_draw_rect(_top, _actor.contact_top.active ? c_yellow : c_olive);
     actor_controller_debug_draw_rect(_left, _actor.contact_left.active ? c_red : c_maroon);
     actor_controller_debug_draw_rect(_right, _actor.contact_right.active ? c_red : c_maroon);
+
+    if (is_struct(_actor.ledge_candidate) && _actor.ledge_candidate.active) {
+        var _ledge_hang = actor_collision_get_actor_rect(_actor, _actor.ledge_candidate.hang_x, _actor.ledge_candidate.hang_y);
+        var _ledge_stand = actor_collision_get_actor_rect(_actor, _actor.ledge_candidate.stand_x, _actor.ledge_candidate.stand_y);
+
+        actor_controller_debug_draw_rect(_ledge_hang, c_fuchsia);
+        actor_controller_debug_draw_rect(_ledge_stand, c_yellow);
+        draw_set_alpha(1);
+        draw_set_color(c_fuchsia);
+        draw_line(
+            _actor.ledge_candidate.ledge_x,
+            _actor.ledge_candidate.ledge_y,
+            _actor.ledge_candidate.stand_x,
+            _actor.ledge_candidate.stand_y
+        );
+    }
 
     if (_actor.debug_draw_vectors && _actor.contact_bottom.active) {
         draw_set_alpha(1);

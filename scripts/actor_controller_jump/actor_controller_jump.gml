@@ -15,6 +15,11 @@ function actor_controller_update_timers(_actor) {
     _actor.ledge_coyote_timer = max(0, _actor.ledge_coyote_timer - 1);
     _actor.drop_through_timer = max(0, _actor.drop_through_timer - 1);
     _actor.wall_jump_lockout_timer = max(0, _actor.wall_jump_lockout_timer - 1);
+    _actor.ledge_grab_lockout_timer = max(0, _actor.ledge_grab_lockout_timer - 1);
+
+    if (_actor.ledge_coyote_timer <= 0) {
+        _actor.ledge_coyote_candidate = noone;
+    }
 
     actor_controller_update_jump_buffer(_actor);
     actor_controller_update_coyote_timers(_actor);
