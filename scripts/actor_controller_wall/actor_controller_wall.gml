@@ -217,7 +217,7 @@ function actor_controller_can_wall_jump(_actor) {
         return false;
     }
 
-    if ((_actor.jump_buffer_timer <= 0) || (_actor.wall_coyote_timer <= 0) || (_actor.wall_jump_lockout_timer > 0)) {
+    if ((_actor.jump_buffer_timer <= 0) || (_actor.wall_jump_lockout_timer > 0)) {
         return false;
     }
 
