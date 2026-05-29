@@ -264,6 +264,17 @@ function ActorController() constructor {
     charge_timer = 0;
     charge_ready = false;
     charge_overready = false;
+    charged_shot_release_active = false;
+    charged_shot_release_timer = 0;
+    charged_shot_release_duration = 0;
+    charged_shot_release_strength = 0;
+    charged_shot_release_initial_strength = 0;
+    charged_shot_release_damping = ACTOR_CHARGED_SHOT_DAMPING_DEFAULT;
+    charged_shot_release_control_reduction = ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT;
+    charged_shot_release_charge_amount = 0;
+    charged_shot_release_source_id = noone;
+    charged_shot_release_ground_launch_allowed = false;
+    charged_shot_release_ground_launch_applied = false;
 
     input = noone;
     input_previous = noone;

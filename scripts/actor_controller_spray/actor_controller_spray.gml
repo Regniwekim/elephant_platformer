@@ -444,12 +444,207 @@ function actor_controller_can_ground_launch_from_charge(_actor) {
     return (_actor.charge_amount > ACTOR_EPSILON) && (_actor.charge_amount >= _threshold - ACTOR_EPSILON);
 }
 
+/// @function actor_controller_is_charged_shot_releasing
+/// @description Reports whether a charged shot is currently applying its sustained release force.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when the charged shot release state is active.
+function actor_controller_is_charged_shot_releasing(_actor) {
+    return is_struct(_actor)
+        && variable_struct_exists(_actor, "charged_shot_release_active")
+        && _actor.charged_shot_release_active;
+}
+
+/// @function actor_controller_stop_charged_shot_release
+/// @description Clears the sustained charged shot release state without changing current one-frame recoil debug values.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Bool} True when an active charged shot release was stopped.
+function actor_controller_stop_charged_shot_release(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    var _was_active = actor_controller_is_charged_shot_releasing(_actor);
+
+    _actor.charged_shot_release_active = false;
+    _actor.charged_shot_release_timer = 0;
+    _actor.charged_shot_release_duration = 0;
+    _actor.charged_shot_release_strength = 0;
+    _actor.charged_shot_release_initial_strength = 0;
+    _actor.charged_shot_release_damping = ACTOR_CHARGED_SHOT_DAMPING_DEFAULT;
+    _actor.charged_shot_release_control_reduction = ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT;
+    _actor.charged_shot_release_charge_amount = 0;
+    _actor.charged_shot_release_source_id = noone;
+    _actor.charged_shot_release_ground_launch_allowed = false;
+    _actor.charged_shot_release_ground_launch_applied = false;
+
+    return _was_active;
+}
+
+/// @function actor_controller_start_charged_shot_release
+/// @description Starts a sustained charged shot release using current charge amount and charged shot tuning.
+/// @param {Struct} _actor Actor controller releasing the charged shot.
+/// @param {Real} _charge_amount Normalized charge amount used to scale release strength.
+/// @param {Bool} _ground_launch_allowed Whether this release may launch from physical ground.
+/// @param {Any} _source_id Source id to attach to generated release forces.
+/// @returns {Bool} True when a sustained release state was started.
+function actor_controller_start_charged_shot_release(_actor, _charge_amount, _ground_launch_allowed, _source_id) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    var _amount = clamp(is_undefined(_charge_amount) ? 0 : _charge_amount, 0, 1);
+    var _strength = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_impulse", ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT)) * _amount;
+    var _duration = max(1, floor(actor_stats_get_optional(_actor.stats, "charged_shot_duration_frames", ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT)));
+    var _damping = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_damping", ACTOR_CHARGED_SHOT_DAMPING_DEFAULT), 0, 1);
+    var _control_reduction = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_control_reduction", ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT), 0, 1);
+
+    actor_controller_stop_spray(_actor);
+
+    _actor.charged_shot_release_active = (_strength > ACTOR_EPSILON);
+    _actor.charged_shot_release_timer = _actor.charged_shot_release_active ? _duration : 0;
+    _actor.charged_shot_release_duration = _duration;
+    _actor.charged_shot_release_strength = _strength;
+    _actor.charged_shot_release_initial_strength = _strength;
+    _actor.charged_shot_release_damping = _damping;
+    _actor.charged_shot_release_control_reduction = _control_reduction;
+    _actor.charged_shot_release_charge_amount = _amount;
+    _actor.charged_shot_release_source_id = is_undefined(_source_id) ? noone : _source_id;
+    _actor.charged_shot_release_ground_launch_allowed = _ground_launch_allowed;
+    _actor.charged_shot_release_ground_launch_applied = false;
+
+    return _actor.charged_shot_release_active;
+}
+
+/// @function actor_controller_get_charged_shot_release_force
+/// @description Calculates charged shot release force from current aim and release strength.
+/// @param {Struct} _actor Actor controller whose current aim should drive the release.
+/// @param {Real} _strength Current charged shot release strength before directional scaling.
+/// @returns {Struct} Force vector with x and y fields.
+function actor_controller_get_charged_shot_release_force(_actor, _strength) {
+    var _force = {
+        x: 0,
+        y: 0
+    };
+
+    if (!is_struct(_actor)) {
+        return _force;
+    }
+
+    var _release_strength = max(0, is_undefined(_strength) ? 0 : _strength);
+
+    _force.x = -_actor.spray_aim_x * _release_strength;
+    _force.y = -_actor.spray_aim_y * _release_strength;
+
+    if (_force.y < -ACTOR_EPSILON) {
+        var _upward_multiplier = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_upward_multiplier", ACTOR_CHARGED_SHOT_UPWARD_MULTIPLIER_DEFAULT));
+        _force.y *= _upward_multiplier;
+    }
+
+    return _force;
+}
+
+/// @function actor_controller_update_charged_shot_release
+/// @description Applies one frame of sustained charged shot force, following current aim and decaying release strength.
+/// @param {Struct} _actor Actor controller receiving charged shot release force.
+/// @returns {Bool} True when the release state consumed this frame and should lock out spray input.
+function actor_controller_update_charged_shot_release(_actor) {
+    if (!actor_controller_is_charged_shot_releasing(_actor)) {
+        return false;
+    }
+
+    if ((_actor.charged_shot_release_timer <= 0) || (_actor.charged_shot_release_strength <= ACTOR_EPSILON)) {
+        actor_controller_stop_charged_shot_release(_actor);
+        return false;
+    }
+
+    actor_controller_stop_spray(_actor);
+
+    var _force = actor_controller_get_charged_shot_release_force(_actor, _actor.charged_shot_release_strength);
+    var _force_x = _force.x;
+    var _force_y = _force.y;
+    var _ground_launch_applied_this_frame = false;
+
+    if (_actor.is_physically_grounded) {
+        var _normal_x = _actor.ground_normal_x;
+        var _normal_y = _actor.ground_normal_y;
+        var _normal_length = point_distance(0, 0, _normal_x, _normal_y);
+
+        if ((_normal_length <= ACTOR_EPSILON) || (_normal_y > ACTOR_EPSILON)) {
+            _normal_x = 0;
+            _normal_y = -1;
+        } else {
+            _normal_x /= _normal_length;
+            _normal_y /= _normal_length;
+        }
+
+        var _away_from_ground = (_force_x * _normal_x) + (_force_y * _normal_y);
+
+        if (_actor.charged_shot_release_ground_launch_allowed && (_away_from_ground > ACTOR_EPSILON)) {
+            _actor.charged_shot_release_ground_launch_applied = true;
+            _ground_launch_applied_this_frame = true;
+            _actor.is_grounded = false;
+            _actor.is_physically_grounded = false;
+            _actor.ground_object = noone;
+            _actor.platform_object = noone;
+            _actor.platform_inherit_object = noone;
+            _actor.platform_inherit_velocity_x = 0;
+            _actor.platform_inherit_velocity_y = 0;
+            _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
+            actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
+        } else if (!_actor.charged_shot_release_ground_launch_allowed) {
+            var _filtered_force = actor_controller_filter_grounded_spray_lift(_actor, _force_x, _force_y);
+            _force_x = _filtered_force.x;
+            _force_y = _filtered_force.y;
+        }
+    }
+
+    _actor.spray_recoil_x = _force_x;
+    _actor.spray_recoil_y = _force_y;
+
+    if (point_distance(0, 0, _force_x, _force_y) > ACTOR_EPSILON) {
+        var _metadata = {
+            spray_mode: ActorSprayMode.CHARGED,
+            charge_amount: _actor.charged_shot_release_charge_amount,
+            release_timer: _actor.charged_shot_release_timer,
+            release_duration: _actor.charged_shot_release_duration,
+            release_strength: _actor.charged_shot_release_strength,
+            ground_launch_allowed: _actor.charged_shot_release_ground_launch_allowed,
+            ground_launch_applied: _actor.charged_shot_release_ground_launch_applied,
+            ground_launch_applied_this_frame: _ground_launch_applied_this_frame
+        };
+
+        actor_controller_add_force(_actor, actor_force_create(
+            ActorForceType.CONTINUOUS,
+            _force_x,
+            _force_y,
+            1,
+            1,
+            _actor.charged_shot_release_control_reduction,
+            _actor.charged_shot_release_source_id,
+            _metadata
+        ));
+    }
+
+    _actor.charged_shot_release_timer = max(0, _actor.charged_shot_release_timer - 1);
+    _actor.charged_shot_release_strength *= _actor.charged_shot_release_damping;
+
+    if ((_actor.charged_shot_release_timer <= 0) || (_actor.charged_shot_release_strength <= ACTOR_EPSILON)) {
+        actor_controller_stop_charged_shot_release(_actor);
+    }
+
+    return true;
+}
+
 /// @function actor_controller_can_release_charged_shot
 /// @description Checks ability, built charge, and water cost for a charged spray release.
 /// @param {Struct} _actor Actor controller to inspect.
 /// @returns {Bool} True when a charged shot may release this frame.
 function actor_controller_can_release_charged_shot(_actor) {
     if (!is_struct(_actor) || !actor_controller_has_charged_spray_ability(_actor)) {
+        return false;
+    }
+
+    if (actor_controller_is_charged_shot_releasing(_actor)) {
         return false;
     }
 
@@ -463,9 +658,9 @@ function actor_controller_can_release_charged_shot(_actor) {
 }
 
 /// @function actor_controller_release_charged_shot
-/// @description Releases a charged spray shot as an impulse and applies grounded launch threshold rules.
+/// @description Spends capacity and starts a sustained charged shot release from current charge state.
 /// @param {Struct} _actor Actor controller releasing the shot.
-/// @returns {Bool} True when water was spent and release event was recorded.
+/// @returns {Bool} True when release input was handled and a release event was recorded.
 function actor_controller_release_charged_shot(_actor) {
     if (!is_struct(_actor)) {
         return false;
@@ -505,22 +700,17 @@ function actor_controller_release_charged_shot(_actor) {
         _actor.water_current = max(0, _actor.water_current - _cost);
     }
 
-    var _impulse = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_impulse", ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT)) * _charge_amount;
-    var _force_x = -_actor.spray_aim_x * _impulse;
-    var _force_y = -_actor.spray_aim_y * _impulse;
-    if (_force_y < -ACTOR_EPSILON) {
-        var _upward_multiplier = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_upward_multiplier", ACTOR_CHARGED_SHOT_UPWARD_MULTIPLIER_DEFAULT));
-        _force_y *= _upward_multiplier;
-    }
-
     var _ground_launch_allowed = actor_controller_can_ground_launch_from_charge(_actor);
-    var _ground_launch_applied = false;
-
-    if (_actor.is_physically_grounded && !_ground_launch_allowed) {
-        var _filtered_force = actor_controller_filter_grounded_spray_lift(_actor, _force_x, _force_y);
-        _force_x = _filtered_force.x;
-        _force_y = _filtered_force.y;
-    } else if (_actor.is_physically_grounded) {
+    var _source_id = is_struct(_actor.input) ? _actor.input.source_id : noone;
+    var _release_started = actor_controller_start_charged_shot_release(
+        _actor,
+        _charge_amount,
+        _ground_launch_allowed,
+        _source_id
+    );
+    var _initial_force = actor_controller_get_charged_shot_release_force(_actor, _actor.charged_shot_release_initial_strength);
+    var _initial_ground_launch_applied = false;
+    if (_actor.is_physically_grounded && _ground_launch_allowed) {
         var _normal_x = _actor.ground_normal_x;
         var _normal_y = _actor.ground_normal_y;
         var _normal_length = point_distance(0, 0, _normal_x, _normal_y);
@@ -533,46 +723,7 @@ function actor_controller_release_charged_shot(_actor) {
             _normal_y /= _normal_length;
         }
 
-        _ground_launch_applied = ((_force_x * _normal_x) + (_force_y * _normal_y)) > ACTOR_EPSILON;
-
-        if (_ground_launch_applied) {
-            _actor.is_grounded = false;
-            _actor.is_physically_grounded = false;
-            _actor.ground_object = noone;
-            _actor.platform_object = noone;
-            _actor.platform_inherit_object = noone;
-            _actor.platform_inherit_velocity_x = 0;
-            _actor.platform_inherit_velocity_y = 0;
-            _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
-            actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
-        }
-    }
-
-    _actor.spray_recoil_x = _force_x;
-    _actor.spray_recoil_y = _force_y;
-
-    if (point_distance(0, 0, _force_x, _force_y) > ACTOR_EPSILON) {
-        var _duration = max(1, floor(actor_stats_get_optional(_actor.stats, "charged_shot_duration_frames", ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT)));
-        var _damping = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_damping", ACTOR_CHARGED_SHOT_DAMPING_DEFAULT), 0, 1);
-        var _control_reduction = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_control_reduction", ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT), 0, 1);
-        var _source_id = is_struct(_actor.input) ? _actor.input.source_id : noone;
-        var _metadata = {
-            spray_mode: ActorSprayMode.CHARGED,
-            charge_amount: _charge_amount,
-            ground_launch_allowed: _ground_launch_allowed,
-            ground_launch_applied: _ground_launch_applied
-        };
-
-        actor_controller_add_force(_actor, actor_force_create(
-            ActorForceType.IMPULSE,
-            _force_x,
-            _force_y,
-            _duration,
-            _damping,
-            _control_reduction,
-            _source_id,
-            _metadata
-        ));
+        _initial_ground_launch_applied = ((_initial_force.x * _normal_x) + (_initial_force.y * _normal_y)) > ACTOR_EPSILON;
     }
 
     var _event = actor_controller_record_event(_actor, ActorControllerEvent.CHARGE_RELEASE);
@@ -580,10 +731,15 @@ function actor_controller_release_charged_shot(_actor) {
         _event.spray_mode = ActorSprayMode.CHARGED;
         _event.charge_amount = _charge_amount;
         _event.water_cost = _cost;
-        _event.impulse_x = _force_x;
-        _event.impulse_y = _force_y;
+        _event.impulse_x = _initial_force.x;
+        _event.impulse_y = _initial_force.y;
+        _event.release_started = _release_started;
+        _event.release_duration = _actor.charged_shot_release_duration;
+        _event.release_strength = _actor.charged_shot_release_initial_strength;
+        _event.release_damping = _actor.charged_shot_release_damping;
+        _event.control_reduction = _actor.charged_shot_release_control_reduction;
         _event.ground_launch_allowed = _ground_launch_allowed;
-        _event.ground_launch_applied = _ground_launch_applied;
+        _event.ground_launch_applied = _initial_ground_launch_applied;
     }
 
     actor_controller_reset_charge(_actor);
@@ -602,6 +758,10 @@ function actor_controller_update_charge(_actor) {
     if (!actor_controller_has_charged_spray_ability(_actor)) {
         actor_controller_reset_charge(_actor);
         return false;
+    }
+
+    if (actor_controller_is_charged_shot_releasing(_actor)) {
+        return true;
     }
 
     var _input = _actor.input;
@@ -745,7 +905,12 @@ function actor_controller_update_spray(_actor) {
 
     if (!actor_controller_has_spray_ability(_actor)) {
         actor_controller_stop_spray(_actor);
+        actor_controller_stop_charged_shot_release(_actor);
         _actor.spray_mode = ActorSprayMode.NONE;
+        return;
+    }
+
+    if (actor_controller_update_charged_shot_release(_actor)) {
         return;
     }
 
@@ -779,6 +944,7 @@ function actor_controller_update_spray(_actor) {
         }
 
         if (actor_controller_update_charge(_actor)) {
+            actor_controller_update_charged_shot_release(_actor);
             return;
         }
     } else {

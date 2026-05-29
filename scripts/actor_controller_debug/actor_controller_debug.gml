@@ -191,7 +191,11 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += "charge: " + actor_controller_debug_format_real(_actor.charge_amount);
     _text += " timer: " + string(_actor.charge_timer);
     _text += " ready: " + actor_controller_debug_bool_text(_actor.charge_ready);
-    _text += " over: " + actor_controller_debug_bool_text(_actor.charge_overready) + "\n";
+    _text += " over: " + actor_controller_debug_bool_text(_actor.charge_overready);
+    _text += " release: " + actor_controller_debug_bool_text(actor_controller_is_charged_shot_releasing(_actor));
+    _text += " t: " + string(_actor.charged_shot_release_timer) + "/" + string(_actor.charged_shot_release_duration);
+    _text += " str: " + actor_controller_debug_format_real(_actor.charged_shot_release_strength);
+    _text += "/" + actor_controller_debug_format_real(_actor.charged_shot_release_initial_strength) + "\n";
     _text += "forces active: " + string(_actor.active_force_count) + "\n";
 
     if (is_array(_actor.active_forces)) {
@@ -323,7 +327,9 @@ function actor_controller_debug_draw_spray(_actor) {
     draw_line(_origin_x, _origin_y, _aim_x, _aim_y);
     draw_circle(_origin_x, _origin_y, ACTOR_DEBUG_SPRAY_ORIGIN_RADIUS_DEFAULT, false);
 
-    if (_actor.spray_active) {
+    if (_actor.spray_active
+        || actor_controller_is_charged_shot_releasing(_actor)
+        || (point_distance(0, 0, _actor.spray_recoil_x, _actor.spray_recoil_y) > ACTOR_EPSILON)) {
         draw_set_color(c_orange);
         draw_line(_origin_x, _origin_y, _recoil_x, _recoil_y);
     }
