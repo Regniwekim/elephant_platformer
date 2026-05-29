@@ -129,6 +129,20 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
 
     var _input = _actor.input;
     var _has_input = is_struct(_input);
+    var _capacity_percent = (_actor.water_max > ACTOR_EPSILON) ? ((_actor.water_current / _actor.water_max) * 100) : 0;
+    var _spray_lift_fade_duration = max(
+        actor_controller_get_continuous_spray_lift_fade_duration(_actor),
+        _actor.spray_vertical_lift_fade_duration
+    );
+    var _spray_lift_fade_timer = actor_controller_is_continuous_spray_lift_fading(_actor)
+        ? min(_spray_lift_fade_duration, _actor.spray_vertical_lift_fade_timer)
+        : _actor.spray_vertical_lift_fade_timer;
+    var _charge_build_frames = max(1, floor(actor_stats_get_optional(_actor.stats, "charge_build_frames", ACTOR_CHARGE_BUILD_FRAMES_DEFAULT)));
+    var _release_duration_stat = max(1, floor(actor_stats_get_optional(_actor.stats, "charged_shot_duration_frames", ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT)));
+    var _release_duration = max(_release_duration_stat, _actor.charged_shot_release_duration);
+    var _release_timer = actor_controller_is_charged_shot_releasing(_actor)
+        ? min(_release_duration, _actor.charged_shot_release_timer + 1)
+        : _actor.charged_shot_release_timer;
     var _text = "";
 
     _text += "Actor Controller " + string(_actor.version) + "\n";
@@ -182,13 +196,23 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += " active: " + actor_controller_debug_bool_text(_actor.spray_active);
     _text += " aim: (" + actor_controller_debug_format_real(_actor.spray_aim_x) + ", " + actor_controller_debug_format_real(_actor.spray_aim_y) + ")";
     _text += " recoil: (" + actor_controller_debug_format_real(_actor.spray_recoil_x) + ", " + actor_controller_debug_format_real(_actor.spray_recoil_y) + ")\n";
-    _text += "water: " + actor_controller_debug_format_real(_actor.water_current) + "/" + actor_controller_debug_format_real(_actor.water_max);
-    _text += "  grace: " + string(_actor.spray_empty_grace_timer);
-    _text += "  refill: " + actor_controller_debug_bool_text(_actor.water_refill_active);
-    _text += "  charge: " + actor_controller_debug_format_real(_actor.charge_amount);
-    _text += " timer: " + string(_actor.charge_timer);
+    _text += "spray lift: current " + actor_controller_debug_format_real(_actor.spray_vertical_lift_current);
+    _text += " target " + actor_controller_debug_format_real(_actor.spray_vertical_lift_target);
+    _text += " fade: " + actor_controller_debug_bool_text(actor_controller_is_continuous_spray_lift_fading(_actor));
+    _text += " t: " + string(_spray_lift_fade_timer) + "/" + string(_spray_lift_fade_duration) + "\n";
+    _text += "capacity: " + actor_controller_debug_format_real(_actor.water_current) + "/" + actor_controller_debug_format_real(_actor.water_max);
+    _text += " (" + string_format(_capacity_percent, 1, 0) + "%)";
+    _text += " unlimited: " + actor_controller_debug_bool_text(actor_controller_has_unlimited_capacity(_actor));
+    _text += " grace: " + string(_actor.spray_empty_grace_timer);
+    _text += " refill: " + actor_controller_debug_bool_text(_actor.water_refill_active) + "\n";
+    _text += "charge build: " + string(_actor.charge_timer) + "/" + string(_charge_build_frames);
+    _text += " amount: " + actor_controller_debug_format_real(_actor.charge_amount);
     _text += " ready: " + actor_controller_debug_bool_text(_actor.charge_ready);
-    _text += " over: " + actor_controller_debug_bool_text(_actor.charge_overready) + "\n";
+    _text += " full: " + actor_controller_debug_bool_text(_actor.charge_overready) + "\n";
+    _text += "blast release: active " + actor_controller_debug_bool_text(actor_controller_is_charged_shot_releasing(_actor));
+    _text += " t: " + string(_release_timer) + "/" + string(_release_duration);
+    _text += " strength: " + actor_controller_debug_format_real(_actor.charged_shot_release_strength);
+    _text += "/" + actor_controller_debug_format_real(_actor.charged_shot_release_initial_strength) + "\n";
     _text += "forces active: " + string(_actor.active_force_count) + "\n";
 
     if (is_array(_actor.active_forces)) {
@@ -320,7 +344,10 @@ function actor_controller_debug_draw_spray(_actor) {
     draw_line(_origin_x, _origin_y, _aim_x, _aim_y);
     draw_circle(_origin_x, _origin_y, ACTOR_DEBUG_SPRAY_ORIGIN_RADIUS_DEFAULT, false);
 
-    if (_actor.spray_active) {
+    if (_actor.spray_active
+        || actor_controller_is_charged_shot_releasing(_actor)
+        || actor_controller_is_continuous_spray_lift_fading(_actor)
+        || (point_distance(0, 0, _actor.spray_recoil_x, _actor.spray_recoil_y) > ACTOR_EPSILON)) {
         draw_set_color(c_orange);
         draw_line(_origin_x, _origin_y, _recoil_x, _recoil_y);
     }

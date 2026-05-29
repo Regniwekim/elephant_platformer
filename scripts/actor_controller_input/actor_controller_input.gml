@@ -34,6 +34,9 @@ function actor_input_frame_normalize(_frame) {
     if (!variable_struct_exists(_frame, "run_released")) {
         _frame.run_released = false;
     }
+    if (!variable_struct_exists(_frame, "debug_unlimited_capacity_toggle_pressed")) {
+        _frame.debug_unlimited_capacity_toggle_pressed = false;
+    }
 
     var _move_x = clamp(_frame.raw_move_x, -1, 1);
     var _move_y = clamp(_frame.raw_move_y, -1, 1);

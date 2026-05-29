@@ -88,6 +88,7 @@ function ai_actor_input_apply_intent(_frame, _intent) {
     }
 
     ai_actor_input_copy_intent_field(_frame, _intent, "debug_toggle_pressed");
+    ai_actor_input_copy_intent_field(_frame, _intent, "debug_unlimited_capacity_toggle_pressed");
 
     return _frame;
 }
