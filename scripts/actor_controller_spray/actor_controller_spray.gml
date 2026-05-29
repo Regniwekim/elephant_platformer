@@ -76,6 +76,7 @@ function actor_controller_get_spray_stats(_actor, _mode) {
     _spray_stats.cost = 0;
     _spray_stats.recoil_strength = 0;
     _spray_stats.vertical_target_speed = 0;
+    _spray_stats.vertical_accel = 0;
     _spray_stats.duration_frames = ACTOR_SPRAY_RECOIL_DURATION_FRAMES_DEFAULT;
     _spray_stats.damping = ACTOR_SPRAY_RECOIL_DAMPING_DEFAULT;
     _spray_stats.control_reduction = ACTOR_SPRAY_RECOIL_CONTROL_REDUCTION_DEFAULT;
@@ -89,12 +90,14 @@ function actor_controller_get_spray_stats(_actor, _mode) {
             _spray_stats.cost = max(0, actor_stats_get_optional(_actor.stats, "spray_wide_cost", ACTOR_SPRAY_WIDE_COST_DEFAULT));
             _spray_stats.recoil_strength = max(0, actor_stats_get_optional(_actor.stats, "spray_wide_recoil", ACTOR_SPRAY_WIDE_RECOIL_DEFAULT));
             _spray_stats.vertical_target_speed = actor_stats_get_optional(_actor.stats, "spray_wide_vertical_target_speed", ACTOR_SPRAY_WIDE_VERTICAL_TARGET_SPEED_DEFAULT);
+            _spray_stats.vertical_accel = max(0, actor_stats_get_optional(_actor.stats, "spray_wide_vertical_accel", ACTOR_SPRAY_WIDE_VERTICAL_ACCEL_DEFAULT));
             break;
 
         case ActorSprayMode.FOCUSED:
             _spray_stats.cost = max(0, actor_stats_get_optional(_actor.stats, "spray_focused_cost", ACTOR_SPRAY_FOCUSED_COST_DEFAULT));
             _spray_stats.recoil_strength = max(0, actor_stats_get_optional(_actor.stats, "spray_focused_recoil", ACTOR_SPRAY_FOCUSED_RECOIL_DEFAULT));
             _spray_stats.vertical_target_speed = actor_stats_get_optional(_actor.stats, "spray_focused_vertical_target_speed", ACTOR_SPRAY_FOCUSED_VERTICAL_TARGET_SPEED_DEFAULT);
+            _spray_stats.vertical_accel = max(0, actor_stats_get_optional(_actor.stats, "spray_focused_vertical_accel", ACTOR_SPRAY_FOCUSED_VERTICAL_ACCEL_DEFAULT));
             break;
     }
 
@@ -322,26 +325,197 @@ function actor_controller_filter_grounded_spray_lift(_actor, _recoil_x, _recoil_
     return _filtered;
 }
 
+/// @function actor_controller_is_continuous_spray_lift_fading
+/// @description Reports whether residual continuous spray vertical lift is currently fading after release.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when residual continuous spray lift is fading.
+function actor_controller_is_continuous_spray_lift_fading(_actor) {
+    return is_struct(_actor)
+        && variable_struct_exists(_actor, "spray_vertical_lift_fade_active")
+        && _actor.spray_vertical_lift_fade_active
+        && (_actor.spray_vertical_lift_fade_timer > 0)
+        && (abs(_actor.spray_vertical_lift_current) > ACTOR_EPSILON);
+}
+
+/// @function actor_controller_get_continuous_spray_lift_fade_duration
+/// @description Gets the configured residual continuous spray vertical lift fade duration.
+/// @param {Struct} _actor Actor controller containing stats.
+/// @returns {Real} Fade duration in frames.
+function actor_controller_get_continuous_spray_lift_fade_duration(_actor) {
+    if (!is_struct(_actor)) {
+        return ACTOR_SPRAY_VERTICAL_RELEASE_FADE_FRAMES_DEFAULT;
+    }
+
+    return max(1, floor(actor_stats_get_optional(
+        _actor.stats,
+        "spray_vertical_release_fade_frames",
+        ACTOR_SPRAY_VERTICAL_RELEASE_FADE_FRAMES_DEFAULT
+    )));
+}
+
+/// @function actor_controller_clear_continuous_spray_lift
+/// @description Clears stored continuous spray vertical lift and any residual fade state.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Undefined} No return value.
+function actor_controller_clear_continuous_spray_lift(_actor) {
+    if (!is_struct(_actor)) {
+        return;
+    }
+
+    _actor.spray_vertical_lift_current = 0;
+    _actor.spray_vertical_lift_target = 0;
+    _actor.spray_vertical_lift_fade_timer = 0;
+    _actor.spray_vertical_lift_fade_duration = 0;
+    _actor.spray_vertical_lift_fade_active = false;
+}
+
+/// @function actor_controller_start_continuous_spray_lift_fade
+/// @description Starts fading residual continuous spray vertical lift after spray stops.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Bool} True when a residual lift fade was started.
+function actor_controller_start_continuous_spray_lift_fade(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    if (_actor.is_physically_grounded) {
+        actor_controller_clear_continuous_spray_lift(_actor);
+        return false;
+    }
+
+    if (actor_controller_is_continuous_spray_lift_fading(_actor)) {
+        return true;
+    }
+
+    if (abs(_actor.spray_vertical_lift_current) <= ACTOR_EPSILON) {
+        actor_controller_clear_continuous_spray_lift(_actor);
+        return false;
+    }
+
+    var _duration = actor_controller_get_continuous_spray_lift_fade_duration(_actor);
+    _actor.spray_vertical_lift_target = 0;
+    _actor.spray_vertical_lift_fade_duration = _duration;
+    _actor.spray_vertical_lift_fade_timer = _duration;
+    _actor.spray_vertical_lift_fade_active = true;
+
+    return true;
+}
+
+/// @function actor_controller_update_continuous_spray_lift_fade
+/// @description Applies one frame of residual continuous spray vertical lift fade through the force stack.
+/// @param {Struct} _actor Actor controller receiving residual lift.
+/// @returns {Bool} True when residual lift contributed this frame.
+function actor_controller_update_continuous_spray_lift_fade(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    if (_actor.is_physically_grounded) {
+        actor_controller_clear_continuous_spray_lift(_actor);
+        return false;
+    }
+
+    if (!actor_controller_is_continuous_spray_lift_fading(_actor)) {
+        actor_controller_clear_continuous_spray_lift(_actor);
+        return false;
+    }
+
+    var _remaining = max(1, floor(_actor.spray_vertical_lift_fade_timer));
+    var _force_y = _actor.spray_vertical_lift_current;
+    var _mode = actor_controller_is_continuous_spray_mode(_actor.spray_mode) ? _actor.spray_mode : ActorSprayMode.WIDE;
+    var _spray_stats = actor_controller_get_spray_stats(_actor, _mode);
+    var _source_id = is_struct(_actor.input) ? _actor.input.source_id : noone;
+    var _metadata = {
+        spray_mode: _mode,
+        spray_lift_fade: true,
+        fade_timer: _remaining,
+        fade_duration: _actor.spray_vertical_lift_fade_duration
+    };
+
+    _actor.spray_recoil_y = _force_y;
+
+    if (abs(_force_y) > ACTOR_EPSILON) {
+        actor_controller_add_force(_actor, actor_force_create(
+            ActorForceType.CONTINUOUS,
+            0,
+            _force_y,
+            1,
+            1,
+            _spray_stats.control_reduction,
+            _source_id,
+            _metadata
+        ));
+    }
+
+    var _fade_step = abs(_actor.spray_vertical_lift_current) / _remaining;
+    _actor.spray_vertical_lift_current = actor_controller_approach(_actor.spray_vertical_lift_current, 0, _fade_step);
+    _actor.spray_vertical_lift_target = 0;
+    _actor.spray_vertical_lift_fade_timer = max(0, _remaining - 1);
+
+    if ((_actor.spray_vertical_lift_fade_timer <= 0) || (abs(_actor.spray_vertical_lift_current) <= ACTOR_EPSILON)) {
+        _actor.spray_vertical_lift_current = 0;
+        _actor.spray_vertical_lift_target = 0;
+        _actor.spray_vertical_lift_fade_timer = 0;
+        _actor.spray_vertical_lift_fade_active = false;
+    }
+
+    return abs(_force_y) > ACTOR_EPSILON;
+}
+
 /// @function actor_controller_apply_airborne_spray_vertical_lift
-/// @description Strengthens airborne downward spray so wide can hover and focused can ascend.
+/// @description Ramps airborne downward spray vertical lift through stored external lift state.
 /// @param {Struct} _actor Actor controller receiving recoil.
 /// @param {Struct} _spray_stats Spray tuning values for the active mode.
 /// @param {Real} _recoil_y Raw vertical recoil before lift targeting.
 /// @returns {Real} Adjusted vertical recoil.
 function actor_controller_apply_airborne_spray_vertical_lift(_actor, _spray_stats, _recoil_y) {
-    if (!is_struct(_actor) || !is_struct(_spray_stats) || _actor.is_physically_grounded) {
+    if (!is_struct(_actor) || !is_struct(_spray_stats)) {
+        return _recoil_y;
+    }
+
+    if (_actor.is_physically_grounded) {
+        actor_controller_clear_continuous_spray_lift(_actor);
         return _recoil_y;
     }
 
     if (_actor.spray_aim_y <= ACTOR_EPSILON) {
-        return _recoil_y;
+        _actor.spray_vertical_lift_target = 0;
+        _actor.spray_vertical_lift_fade_timer = 0;
+        _actor.spray_vertical_lift_fade_duration = actor_controller_get_continuous_spray_lift_fade_duration(_actor);
+        _actor.spray_vertical_lift_fade_active = false;
+        _actor.spray_vertical_lift_current = actor_controller_approach(
+            _actor.spray_vertical_lift_current,
+            0,
+            max(0, _spray_stats.vertical_accel)
+        );
+
+        if (abs(_actor.spray_vertical_lift_current) <= ACTOR_EPSILON) {
+            _actor.spray_vertical_lift_current = 0;
+        }
+
+        return _recoil_y + _actor.spray_vertical_lift_current;
     }
 
     var _aim_scale = clamp(_actor.spray_aim_y, 0, 1);
     var _target_total_y = lerp(_actor.vsp, _spray_stats.vertical_target_speed, _aim_scale);
-    var _target_recoil_y = _target_total_y - _actor.vsp;
+    var _target_lift_y = min(0, _target_total_y - _actor.vsp);
+    var _lift_accel = max(0, _spray_stats.vertical_accel) * _aim_scale;
 
-    return min(_recoil_y, _target_recoil_y);
+    _actor.spray_vertical_lift_target = _target_lift_y;
+    _actor.spray_vertical_lift_fade_timer = 0;
+    _actor.spray_vertical_lift_fade_duration = actor_controller_get_continuous_spray_lift_fade_duration(_actor);
+    _actor.spray_vertical_lift_fade_active = false;
+    _actor.spray_vertical_lift_current = actor_controller_approach(
+        _actor.spray_vertical_lift_current,
+        _actor.spray_vertical_lift_target,
+        _lift_accel
+    );
+
+    if (abs(_actor.spray_vertical_lift_current) <= ACTOR_EPSILON) {
+        _actor.spray_vertical_lift_current = 0;
+    }
+
+    return _actor.spray_vertical_lift_current;
 }
 
 /// @function actor_controller_apply_spray_recoil
@@ -498,6 +672,7 @@ function actor_controller_start_charged_shot_release(_actor, _charge_amount, _gr
     var _control_reduction = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_control_reduction", ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT), 0, 1);
 
     actor_controller_stop_spray(_actor);
+    actor_controller_clear_continuous_spray_lift(_actor);
 
     _actor.charged_shot_release_active = (_strength > ACTOR_EPSILON);
     _actor.charged_shot_release_timer = _actor.charged_shot_release_active ? _duration : 0;
@@ -557,6 +732,7 @@ function actor_controller_update_charged_shot_release(_actor) {
     }
 
     actor_controller_stop_spray(_actor);
+    actor_controller_clear_continuous_spray_lift(_actor);
 
     var _release_duration = max(1, floor(_actor.charged_shot_release_duration));
     _actor.charged_shot_release_timer = clamp(floor(_actor.charged_shot_release_timer), 0, _release_duration);
@@ -906,11 +1082,20 @@ function actor_controller_update_spray(_actor) {
     _actor.spray_recoil_x = 0;
     _actor.spray_recoil_y = 0;
 
+    if (_actor.is_physically_grounded) {
+        actor_controller_clear_continuous_spray_lift(_actor);
+    }
+
     if (!actor_controller_has_spray_ability(_actor)) {
         actor_controller_stop_spray(_actor);
         actor_controller_stop_charged_shot_release(_actor);
+        actor_controller_clear_continuous_spray_lift(_actor);
         _actor.spray_mode = ActorSprayMode.NONE;
         return;
+    }
+
+    if (actor_controller_is_charged_shot_releasing(_actor)) {
+        actor_controller_clear_continuous_spray_lift(_actor);
     }
 
     if (actor_controller_update_charged_shot_release(_actor)) {
@@ -931,7 +1116,9 @@ function actor_controller_update_spray(_actor) {
     }
 
     if (!is_struct(_actor.input)) {
+        actor_controller_start_continuous_spray_lift_fade(_actor);
         actor_controller_stop_spray(_actor);
+        actor_controller_update_continuous_spray_lift_fade(_actor);
         return;
     }
 
@@ -944,9 +1131,11 @@ function actor_controller_update_spray(_actor) {
 
         if (_has_charge_input) {
             actor_controller_stop_spray(_actor);
+            actor_controller_clear_continuous_spray_lift(_actor);
         }
 
         if (actor_controller_update_charge(_actor)) {
+            actor_controller_clear_continuous_spray_lift(_actor);
             actor_controller_update_charged_shot_release(_actor);
             return;
         }
@@ -956,16 +1145,21 @@ function actor_controller_update_spray(_actor) {
 
     var _wants_spray = _actor.input.spray_held || _actor.input.spray_pressed;
     if (_actor.input.spray_released || !_wants_spray) {
+        actor_controller_start_continuous_spray_lift_fade(_actor);
         actor_controller_stop_spray(_actor);
+        actor_controller_update_continuous_spray_lift_fade(_actor);
         return;
     }
 
     if (!_actor.spray_active && !actor_controller_start_spray(_actor)) {
+        actor_controller_update_continuous_spray_lift_fade(_actor);
         return;
     }
 
     if (!actor_controller_apply_spray_cost(_actor)) {
+        actor_controller_start_continuous_spray_lift_fade(_actor);
         actor_controller_stop_spray(_actor);
+        actor_controller_update_continuous_spray_lift_fade(_actor);
         return;
     }
 

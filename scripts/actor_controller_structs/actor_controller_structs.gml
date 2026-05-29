@@ -48,12 +48,15 @@ function ActorStats() constructor {
     spray_wide_cost = ACTOR_SPRAY_WIDE_COST_DEFAULT;
     spray_wide_recoil = ACTOR_SPRAY_WIDE_RECOIL_DEFAULT;
     spray_wide_vertical_target_speed = ACTOR_SPRAY_WIDE_VERTICAL_TARGET_SPEED_DEFAULT;
+    spray_wide_vertical_accel = ACTOR_SPRAY_WIDE_VERTICAL_ACCEL_DEFAULT;
     spray_focused_cost = ACTOR_SPRAY_FOCUSED_COST_DEFAULT;
     spray_focused_recoil = ACTOR_SPRAY_FOCUSED_RECOIL_DEFAULT;
     spray_focused_vertical_target_speed = ACTOR_SPRAY_FOCUSED_VERTICAL_TARGET_SPEED_DEFAULT;
+    spray_focused_vertical_accel = ACTOR_SPRAY_FOCUSED_VERTICAL_ACCEL_DEFAULT;
     spray_recoil_duration_frames = ACTOR_SPRAY_RECOIL_DURATION_FRAMES_DEFAULT;
     spray_recoil_damping = ACTOR_SPRAY_RECOIL_DAMPING_DEFAULT;
     spray_recoil_control_reduction = ACTOR_SPRAY_RECOIL_CONTROL_REDUCTION_DEFAULT;
+    spray_vertical_release_fade_frames = ACTOR_SPRAY_VERTICAL_RELEASE_FADE_FRAMES_DEFAULT;
     water_refill_rate = ACTOR_WATER_REFILL_RATE_DEFAULT;
     spray_ground_lift_suppressed = ACTOR_SPRAY_GROUND_LIFT_SUPPRESS;
     ground_launch_charge_min = ACTOR_GROUND_LAUNCH_CHARGE_MIN_DEFAULT;
@@ -255,6 +258,11 @@ function ActorController() constructor {
     spray_recoil_x = 0;
     spray_recoil_y = 0;
     spray_empty_grace_timer = 0;
+    spray_vertical_lift_current = 0;
+    spray_vertical_lift_target = 0;
+    spray_vertical_lift_fade_timer = 0;
+    spray_vertical_lift_fade_duration = 0;
+    spray_vertical_lift_fade_active = false;
 
     water_current = ACTOR_WATER_MAX_DEFAULT;
     water_max = ACTOR_WATER_MAX_DEFAULT;
