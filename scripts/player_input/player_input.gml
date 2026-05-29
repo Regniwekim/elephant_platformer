@@ -53,6 +53,7 @@ function player_input_build_frame(_source_id, _origin_x, _origin_y, _frame_numbe
     _frame.raw_aim_y = mouse_y - _origin_y;
 
     _frame.debug_toggle_pressed = keyboard_check_pressed(vk_f3);
+    _frame.debug_unlimited_capacity_toggle_pressed = keyboard_check_pressed(vk_f4);
 
     return actor_input_frame_normalize(_frame);
 }

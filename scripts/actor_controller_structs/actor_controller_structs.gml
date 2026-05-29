@@ -117,6 +117,7 @@ function ActorInputFrame() constructor {
     nozzle_value_delta = 0;
 
     debug_toggle_pressed = false;
+    debug_unlimited_capacity_toggle_pressed = false;
 }
 
 /// @function ActorForce
@@ -272,4 +273,5 @@ function ActorController() constructor {
     debug_draw_probes = ACTOR_DEBUG_DRAW_PROBES_DEFAULT;
     debug_draw_vectors = ACTOR_DEBUG_DRAW_VECTORS_DEFAULT;
     debug_print_events = ACTOR_DEBUG_PRINT_EVENTS_DEFAULT;
+    debug_unlimited_capacity = false;
 }

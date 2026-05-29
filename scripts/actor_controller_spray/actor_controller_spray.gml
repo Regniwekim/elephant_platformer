@@ -36,6 +36,34 @@ function actor_controller_has_charged_spray_ability(_actor) {
     return (_abilities & ACTOR_ABILITY_CHARGE_SPRAY) != 0;
 }
 
+/// @function actor_controller_has_unlimited_capacity
+/// @description Reports whether debug unlimited spray capacity is enabled for an actor.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when debug unlimited capacity is enabled.
+function actor_controller_has_unlimited_capacity(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    return variable_struct_exists(_actor, "debug_unlimited_capacity") && _actor.debug_unlimited_capacity;
+}
+
+/// @function actor_controller_refill_unlimited_capacity
+/// @description Keeps water topped off while debug unlimited spray capacity is enabled.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Bool} True when unlimited capacity was active.
+function actor_controller_refill_unlimited_capacity(_actor) {
+    if (!actor_controller_has_unlimited_capacity(_actor)) {
+        return false;
+    }
+
+    _actor.water_max = max(0, _actor.water_max);
+    _actor.water_current = _actor.water_max;
+    _actor.spray_empty_grace_timer = actor_controller_get_timer_stat(_actor, "empty_spray_grace_frames", ACTOR_EMPTY_SPRAY_GRACE_FRAMES_DEFAULT);
+
+    return true;
+}
+
 /// @function actor_controller_get_spray_stats
 /// @description Gets mode-specific water cost and recoil tuning for continuous spray.
 /// @param {Struct} _actor Actor controller containing stats.
@@ -143,7 +171,7 @@ function actor_controller_can_spray(_actor) {
         return false;
     }
 
-    return _actor.water_current > ACTOR_EPSILON;
+    return actor_controller_has_unlimited_capacity(_actor) || (_actor.water_current > ACTOR_EPSILON);
 }
 
 /// @function actor_controller_start_spray
@@ -216,6 +244,10 @@ function actor_controller_stop_spray(_actor) {
 function actor_controller_apply_spray_cost(_actor) {
     if (!is_struct(_actor) || !_actor.spray_active) {
         return false;
+    }
+
+    if (actor_controller_refill_unlimited_capacity(_actor)) {
+        return true;
     }
 
     var _spray_stats = actor_controller_get_spray_stats(_actor, _actor.spray_mode);
@@ -396,7 +428,7 @@ function actor_controller_can_release_charged_shot(_actor) {
 
     var _cost = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_cost", ACTOR_CHARGED_SHOT_COST_DEFAULT));
 
-    return _actor.water_current + ACTOR_EPSILON >= _cost;
+    return actor_controller_has_unlimited_capacity(_actor) || (_actor.water_current + ACTOR_EPSILON >= _cost);
 }
 
 /// @function actor_controller_release_charged_shot
@@ -422,6 +454,7 @@ function actor_controller_release_charged_shot(_actor) {
     }
 
     var _cost = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_cost", ACTOR_CHARGED_SHOT_COST_DEFAULT));
+    var _unlimited_capacity = actor_controller_has_unlimited_capacity(_actor);
     if (!actor_controller_can_release_charged_shot(_actor)) {
         var _dry_event = actor_controller_record_event(_actor, ActorControllerEvent.NO_WATER);
         if (is_struct(_dry_event)) {
@@ -435,7 +468,11 @@ function actor_controller_release_charged_shot(_actor) {
         return false;
     }
 
-    _actor.water_current = max(0, _actor.water_current - _cost);
+    if (_unlimited_capacity) {
+        actor_controller_refill_unlimited_capacity(_actor);
+    } else {
+        _actor.water_current = max(0, _actor.water_current - _cost);
+    }
 
     var _impulse = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_impulse", ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT)) * _charge_amount;
     var _force_x = -_actor.spray_aim_x * _impulse;
@@ -664,6 +701,8 @@ function actor_controller_update_spray(_actor) {
     if (!is_struct(_actor)) {
         return;
     }
+
+    actor_controller_refill_unlimited_capacity(_actor);
 
     _actor.spray_recoil_x = 0;
     _actor.spray_recoil_y = 0;

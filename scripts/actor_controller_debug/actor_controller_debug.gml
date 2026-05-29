@@ -129,6 +129,7 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
 
     var _input = _actor.input;
     var _has_input = is_struct(_input);
+    var _capacity_percent = (_actor.water_max > ACTOR_EPSILON) ? ((_actor.water_current / _actor.water_max) * 100) : 0;
     var _text = "";
 
     _text += "Actor Controller " + string(_actor.version) + "\n";
@@ -182,10 +183,12 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += " active: " + actor_controller_debug_bool_text(_actor.spray_active);
     _text += " aim: (" + actor_controller_debug_format_real(_actor.spray_aim_x) + ", " + actor_controller_debug_format_real(_actor.spray_aim_y) + ")";
     _text += " recoil: (" + actor_controller_debug_format_real(_actor.spray_recoil_x) + ", " + actor_controller_debug_format_real(_actor.spray_recoil_y) + ")\n";
-    _text += "water: " + actor_controller_debug_format_real(_actor.water_current) + "/" + actor_controller_debug_format_real(_actor.water_max);
-    _text += "  grace: " + string(_actor.spray_empty_grace_timer);
-    _text += "  refill: " + actor_controller_debug_bool_text(_actor.water_refill_active);
-    _text += "  charge: " + actor_controller_debug_format_real(_actor.charge_amount);
+    _text += "capacity: " + actor_controller_debug_format_real(_actor.water_current) + "/" + actor_controller_debug_format_real(_actor.water_max);
+    _text += " (" + string_format(_capacity_percent, 1, 0) + "%)";
+    _text += " unlimited: " + actor_controller_debug_bool_text(actor_controller_has_unlimited_capacity(_actor));
+    _text += " grace: " + string(_actor.spray_empty_grace_timer);
+    _text += " refill: " + actor_controller_debug_bool_text(_actor.water_refill_active) + "\n";
+    _text += "charge: " + actor_controller_debug_format_real(_actor.charge_amount);
     _text += " timer: " + string(_actor.charge_timer);
     _text += " ready: " + actor_controller_debug_bool_text(_actor.charge_ready);
     _text += " over: " + actor_controller_debug_bool_text(_actor.charge_overready) + "\n";

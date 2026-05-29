@@ -6,5 +6,9 @@ if (actor_input.debug_toggle_pressed) {
     actor_controller.debug_enabled = !actor_controller.debug_enabled;
 }
 
+if (actor_input.debug_unlimited_capacity_toggle_pressed) {
+    actor_controller.debug_unlimited_capacity = !actor_controller.debug_unlimited_capacity;
+}
+
 actor_controller_update(actor_controller, actor_input);
 actor_controller_apply_to_instance(actor_controller, id);
