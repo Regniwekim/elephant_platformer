@@ -28,6 +28,11 @@ function ActorStats() constructor {
     max_fall_speed = 8.0;
     jump_speed = -6.0;
     jump_cut_multiplier = 0.45;
+    wall_slide_speed = ACTOR_WALL_SLIDE_SPEED_DEFAULT;
+    wall_slide_requires_input = ACTOR_WALL_SLIDE_REQUIRES_INPUT_DEFAULT;
+    wall_slide_input_threshold = ACTOR_WALL_SLIDE_INPUT_THRESHOLD_DEFAULT;
+    wall_jump_horizontal_speed = ACTOR_WALL_JUMP_HORIZONTAL_SPEED_DEFAULT;
+    wall_jump_vertical_speed = ACTOR_WALL_JUMP_VERTICAL_SPEED_DEFAULT;
 
     slope_max_angle = ACTOR_SLOPE_MAX_ANGLE_DEFAULT;
     slope_snap_distance = ACTOR_SLOPE_SNAP_DISTANCE_DEFAULT;
@@ -211,6 +216,10 @@ function ActorController() constructor {
     wall_normal_x = 0;
     wall_normal_y = 0;
     wall_object = noone;
+    wall_coyote_normal_x = 0;
+    wall_coyote_normal_y = 0;
+    wall_coyote_object = noone;
+    wall_slide_speed = ACTOR_WALL_SLIDE_SPEED_DEFAULT;
 
     jump_buffer_timer = 0;
     ground_coyote_timer = 0;

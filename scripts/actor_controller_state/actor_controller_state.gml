@@ -58,6 +58,8 @@ function actor_controller_update_state(_actor) {
 
     if (_actor.is_physically_grounded) {
         actor_controller_set_state(_actor, ActorMoveState.GROUNDED);
+    } else if (actor_controller_can_wall_slide(_actor)) {
+        actor_controller_try_enter_wall_slide(_actor);
     } else {
         actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
     }
@@ -79,6 +81,9 @@ function actor_controller_can_enter_state(_actor, _state) {
 
         case ActorMoveState.AIRBORNE:
             return true;
+
+        case ActorMoveState.WALL_SLIDE:
+            return actor_controller_can_wall_slide(_actor);
 
         case ActorMoveState.STUNNED:
         case ActorMoveState.KNOCKBACK:
