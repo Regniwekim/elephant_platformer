@@ -495,7 +495,6 @@ function actor_controller_start_charged_shot_release(_actor, _charge_amount, _gr
     var _amount = clamp(is_undefined(_charge_amount) ? 0 : _charge_amount, 0, 1);
     var _strength = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_impulse", ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT)) * _amount;
     var _duration = max(1, floor(actor_stats_get_optional(_actor.stats, "charged_shot_duration_frames", ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT)));
-    var _damping = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_damping", ACTOR_CHARGED_SHOT_DAMPING_DEFAULT), 0, 1);
     var _control_reduction = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_control_reduction", ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT), 0, 1);
 
     actor_controller_stop_spray(_actor);
@@ -505,7 +504,7 @@ function actor_controller_start_charged_shot_release(_actor, _charge_amount, _gr
     _actor.charged_shot_release_duration = _duration;
     _actor.charged_shot_release_strength = _strength;
     _actor.charged_shot_release_initial_strength = _strength;
-    _actor.charged_shot_release_damping = _damping;
+    _actor.charged_shot_release_damping = 1;
     _actor.charged_shot_release_control_reduction = _control_reduction;
     _actor.charged_shot_release_charge_amount = _amount;
     _actor.charged_shot_release_source_id = is_undefined(_source_id) ? noone : _source_id;
@@ -544,7 +543,7 @@ function actor_controller_get_charged_shot_release_force(_actor, _strength) {
 }
 
 /// @function actor_controller_update_charged_shot_release
-/// @description Applies one frame of sustained charged shot force, following current aim and decaying release strength.
+/// @description Applies one frame of sustained charged shot force, following current aim and linearly fading release strength.
 /// @param {Struct} _actor Actor controller receiving charged shot release force.
 /// @returns {Bool} True when the release state consumed this frame and should lock out spray input.
 function actor_controller_update_charged_shot_release(_actor) {
@@ -552,12 +551,17 @@ function actor_controller_update_charged_shot_release(_actor) {
         return false;
     }
 
-    if ((_actor.charged_shot_release_timer <= 0) || (_actor.charged_shot_release_strength <= ACTOR_EPSILON)) {
+    if ((_actor.charged_shot_release_timer <= 0) || (_actor.charged_shot_release_initial_strength <= ACTOR_EPSILON)) {
         actor_controller_stop_charged_shot_release(_actor);
         return false;
     }
 
     actor_controller_stop_spray(_actor);
+
+    var _release_duration = max(1, floor(_actor.charged_shot_release_duration));
+    _actor.charged_shot_release_timer = clamp(floor(_actor.charged_shot_release_timer), 0, _release_duration);
+    var _release_scale = _actor.charged_shot_release_timer / _release_duration;
+    _actor.charged_shot_release_strength = _actor.charged_shot_release_initial_strength * _release_scale;
 
     var _force = actor_controller_get_charged_shot_release_force(_actor, _actor.charged_shot_release_strength);
     var _force_x = _force.x;
@@ -626,9 +630,8 @@ function actor_controller_update_charged_shot_release(_actor) {
     }
 
     _actor.charged_shot_release_timer = max(0, _actor.charged_shot_release_timer - 1);
-    _actor.charged_shot_release_strength *= _actor.charged_shot_release_damping;
 
-    if ((_actor.charged_shot_release_timer <= 0) || (_actor.charged_shot_release_strength <= ACTOR_EPSILON)) {
+    if (_actor.charged_shot_release_timer <= 0) {
         actor_controller_stop_charged_shot_release(_actor);
     }
 
