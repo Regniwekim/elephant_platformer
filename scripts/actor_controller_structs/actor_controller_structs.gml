@@ -47,8 +47,10 @@ function ActorStats() constructor {
     empty_spray_grace_frames = ACTOR_EMPTY_SPRAY_GRACE_FRAMES_DEFAULT;
     spray_wide_cost = ACTOR_SPRAY_WIDE_COST_DEFAULT;
     spray_wide_recoil = ACTOR_SPRAY_WIDE_RECOIL_DEFAULT;
+    spray_wide_vertical_target_speed = ACTOR_SPRAY_WIDE_VERTICAL_TARGET_SPEED_DEFAULT;
     spray_focused_cost = ACTOR_SPRAY_FOCUSED_COST_DEFAULT;
     spray_focused_recoil = ACTOR_SPRAY_FOCUSED_RECOIL_DEFAULT;
+    spray_focused_vertical_target_speed = ACTOR_SPRAY_FOCUSED_VERTICAL_TARGET_SPEED_DEFAULT;
     spray_recoil_duration_frames = ACTOR_SPRAY_RECOIL_DURATION_FRAMES_DEFAULT;
     spray_recoil_damping = ACTOR_SPRAY_RECOIL_DAMPING_DEFAULT;
     spray_recoil_control_reduction = ACTOR_SPRAY_RECOIL_CONTROL_REDUCTION_DEFAULT;
@@ -58,6 +60,7 @@ function ActorStats() constructor {
     charge_build_frames = ACTOR_CHARGE_BUILD_FRAMES_DEFAULT;
     charged_shot_cost = ACTOR_CHARGED_SHOT_COST_DEFAULT;
     charged_shot_impulse = ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT;
+    charged_shot_upward_multiplier = ACTOR_CHARGED_SHOT_UPWARD_MULTIPLIER_DEFAULT;
     charged_shot_duration_frames = ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT;
     charged_shot_damping = ACTOR_CHARGED_SHOT_DAMPING_DEFAULT;
     charged_shot_control_reduction = ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT;

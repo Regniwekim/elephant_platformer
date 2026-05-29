@@ -75,6 +75,7 @@ function actor_controller_get_spray_stats(_actor, _mode) {
     _spray_stats.mode = _mode;
     _spray_stats.cost = 0;
     _spray_stats.recoil_strength = 0;
+    _spray_stats.vertical_target_speed = 0;
     _spray_stats.duration_frames = ACTOR_SPRAY_RECOIL_DURATION_FRAMES_DEFAULT;
     _spray_stats.damping = ACTOR_SPRAY_RECOIL_DAMPING_DEFAULT;
     _spray_stats.control_reduction = ACTOR_SPRAY_RECOIL_CONTROL_REDUCTION_DEFAULT;
@@ -87,11 +88,13 @@ function actor_controller_get_spray_stats(_actor, _mode) {
         case ActorSprayMode.WIDE:
             _spray_stats.cost = max(0, actor_stats_get_optional(_actor.stats, "spray_wide_cost", ACTOR_SPRAY_WIDE_COST_DEFAULT));
             _spray_stats.recoil_strength = max(0, actor_stats_get_optional(_actor.stats, "spray_wide_recoil", ACTOR_SPRAY_WIDE_RECOIL_DEFAULT));
+            _spray_stats.vertical_target_speed = actor_stats_get_optional(_actor.stats, "spray_wide_vertical_target_speed", ACTOR_SPRAY_WIDE_VERTICAL_TARGET_SPEED_DEFAULT);
             break;
 
         case ActorSprayMode.FOCUSED:
             _spray_stats.cost = max(0, actor_stats_get_optional(_actor.stats, "spray_focused_cost", ACTOR_SPRAY_FOCUSED_COST_DEFAULT));
             _spray_stats.recoil_strength = max(0, actor_stats_get_optional(_actor.stats, "spray_focused_recoil", ACTOR_SPRAY_FOCUSED_RECOIL_DEFAULT));
+            _spray_stats.vertical_target_speed = actor_stats_get_optional(_actor.stats, "spray_focused_vertical_target_speed", ACTOR_SPRAY_FOCUSED_VERTICAL_TARGET_SPEED_DEFAULT);
             break;
     }
 
@@ -319,6 +322,28 @@ function actor_controller_filter_grounded_spray_lift(_actor, _recoil_x, _recoil_
     return _filtered;
 }
 
+/// @function actor_controller_apply_airborne_spray_vertical_lift
+/// @description Strengthens airborne downward spray so wide can hover and focused can ascend.
+/// @param {Struct} _actor Actor controller receiving recoil.
+/// @param {Struct} _spray_stats Spray tuning values for the active mode.
+/// @param {Real} _recoil_y Raw vertical recoil before lift targeting.
+/// @returns {Real} Adjusted vertical recoil.
+function actor_controller_apply_airborne_spray_vertical_lift(_actor, _spray_stats, _recoil_y) {
+    if (!is_struct(_actor) || !is_struct(_spray_stats) || _actor.is_physically_grounded) {
+        return _recoil_y;
+    }
+
+    if (_actor.spray_aim_y <= ACTOR_EPSILON) {
+        return _recoil_y;
+    }
+
+    var _aim_scale = clamp(_actor.spray_aim_y, 0, 1);
+    var _target_total_y = lerp(_actor.vsp, _spray_stats.vertical_target_speed, _aim_scale);
+    var _target_recoil_y = _target_total_y - _actor.vsp;
+
+    return min(_recoil_y, _target_recoil_y);
+}
+
 /// @function actor_controller_apply_spray_recoil
 /// @description Adds continuous spray recoil through the external force stack.
 /// @param {Struct} _actor Actor controller receiving recoil.
@@ -331,11 +356,17 @@ function actor_controller_apply_spray_recoil(_actor) {
     var _spray_stats = actor_controller_get_spray_stats(_actor, _actor.spray_mode);
     var _surface_recoil = actor_controller_get_surface_multiplier(_actor, "recoil_multiplier");
     var _strength = _spray_stats.recoil_strength * _surface_recoil;
+    var _raw_recoil_x = -_actor.spray_aim_x * _strength;
+    var _raw_recoil_y = actor_controller_apply_airborne_spray_vertical_lift(
+        _actor,
+        _spray_stats,
+        -_actor.spray_aim_y * _strength
+    );
 
     var _filtered_recoil = actor_controller_filter_grounded_spray_lift(
         _actor,
-        -_actor.spray_aim_x * _strength,
-        -_actor.spray_aim_y * _strength
+        _raw_recoil_x,
+        _raw_recoil_y
     );
 
     _actor.spray_recoil_x = _filtered_recoil.x;
@@ -477,6 +508,11 @@ function actor_controller_release_charged_shot(_actor) {
     var _impulse = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_impulse", ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT)) * _charge_amount;
     var _force_x = -_actor.spray_aim_x * _impulse;
     var _force_y = -_actor.spray_aim_y * _impulse;
+    if (_force_y < -ACTOR_EPSILON) {
+        var _upward_multiplier = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_upward_multiplier", ACTOR_CHARGED_SHOT_UPWARD_MULTIPLIER_DEFAULT));
+        _force_y *= _upward_multiplier;
+    }
+
     var _ground_launch_allowed = actor_controller_can_ground_launch_from_charge(_actor);
     var _ground_launch_applied = false;
 
