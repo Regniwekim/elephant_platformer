@@ -12,7 +12,7 @@ Implement the mandatory rule that normal grounded spray cannot lift the actor, w
 
 ## Implementation Scope
 
-Implement grounded spray lift filtering, charge buildup, charged release, and ground launch threshold behavior. Do not add unrelated spray interactions or object-breaking systems unless a simple event hook is needed.
+Implement grounded spray lift filtering, charge buildup, sustained charged release, and ground launch threshold behavior. Do not add unrelated spray interactions or object-breaking systems unless a simple event hook is needed.
 
 Required scripts:
 
@@ -28,8 +28,10 @@ Required scripts:
 - On slopes, split recoil into normal and tangent components, remove or reduce the away-from-ground component, and preserve tangent movement.
 - Preserve airborne downward spray lift, including when the actor has coyote time but is no longer physically grounded.
 - Implement `actor_controller_update_charge()`, `actor_controller_can_release_charged_shot()`, `actor_controller_release_charged_shot()`, and `actor_controller_can_ground_launch_from_charge()`.
+- Treat `charge_timer` as the build-up timer only; charged blast duration belongs to the release state through `charged_shot_release_timer` and `charged_shot_duration_frames`.
 - Allow grounded charged launch only when `charge_amount >= stats.ground_launch_charge_min`.
-- Treat charged release as an impulse, not continuous recoil.
+- Charged release spends water once, records a release event, resets charge buildup, then starts a sustained release that follows current aim for `charged_shot_duration_frames`.
+- During sustained charged release, apply force through the external force stack each frame with fading strength, block normal spray and new charge buildup, and preserve the grounded launch threshold.
 - Emit or record charge start, charge full, charge release, and dry/no-water feedback events.
 
 ## Acceptance Criteria
@@ -40,7 +42,9 @@ Required scripts:
 - Airborne downward spray lifts the actor.
 - Walking off a ledge and spraying downward during coyote time lifts the actor because physical grounded is false.
 - Charged ground launch works only at or above the configured threshold.
-- Charged shot release uses water cost and impulse tuning from stats.
+- Charged shot release uses water cost, release strength, release duration, fade, and control tuning from stats.
+- Charge build-up and charged blast release are visible as separate timers in debug output.
+- Charged shot release follows current aim for its active duration and blocks normal spray or new charge buildup until complete.
 
 ## Testing Checklist
 
@@ -51,7 +55,10 @@ Required scripts:
 - Walk off a ledge during coyote time, spray down, and verify lift.
 - Charge below threshold on ground and release; verify no ground launch.
 - Charge at or above threshold on ground and release; verify launch.
-- Release a charged shot in air and verify impulse applies.
+- Hold charge until the build timer is full, release, and verify the build timer resets while the blast release timer runs.
+- Release a charged shot in air and verify sustained force applies for `charged_shot_duration_frames`.
+- Rotate aim during charged release and verify the blast follows current aim while fading.
+- Try to spray or begin another charge during charged release and verify input is ignored until release ends.
 
 ## Definition of Done
 
