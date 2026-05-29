@@ -20,6 +20,7 @@ function actor_controller_set_state(_actor, _new_state) {
 
     _actor.state_previous = _actor.state;
     _actor.state = _new_state;
+    _actor.time_in_state = 0;
 
     return true;
 }
@@ -84,6 +85,16 @@ function actor_controller_can_enter_state(_actor, _state) {
 
         case ActorMoveState.WALL_SLIDE:
             return actor_controller_can_wall_slide(_actor);
+
+        case ActorMoveState.LEDGE_GRAB:
+            return is_struct(_actor.stats)
+                && ((_actor.stats.abilities & ACTOR_ABILITY_LEDGE_GRAB) != 0)
+                && is_struct(_actor.ledge_candidate)
+                && _actor.ledge_candidate.active;
+
+        case ActorMoveState.MANTLE:
+            return (_actor.state == ActorMoveState.LEDGE_GRAB)
+                || (_actor.state == ActorMoveState.MANTLE);
 
         case ActorMoveState.STUNNED:
         case ActorMoveState.KNOCKBACK:

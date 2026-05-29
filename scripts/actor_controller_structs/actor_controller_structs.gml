@@ -33,6 +33,14 @@ function ActorStats() constructor {
     wall_slide_input_threshold = ACTOR_WALL_SLIDE_INPUT_THRESHOLD_DEFAULT;
     wall_jump_horizontal_speed = ACTOR_WALL_JUMP_HORIZONTAL_SPEED_DEFAULT;
     wall_jump_vertical_speed = ACTOR_WALL_JUMP_VERTICAL_SPEED_DEFAULT;
+    ledge_grab_max_speed = ACTOR_LEDGE_GRAB_MAX_SPEED_DEFAULT;
+    ledge_input_threshold = ACTOR_LEDGE_INPUT_THRESHOLD_DEFAULT;
+    ledge_reach_up = ACTOR_LEDGE_REACH_UP_DEFAULT;
+    ledge_reach_down = ACTOR_LEDGE_REACH_DOWN_DEFAULT;
+    ledge_stand_inset = ACTOR_LEDGE_STAND_INSET_DEFAULT;
+    ledge_hang_top_offset = ACTOR_LEDGE_HANG_TOP_OFFSET_DEFAULT;
+    ledge_mantle_frames = ACTOR_LEDGE_MANTLE_FRAMES_DEFAULT;
+    ledge_regrab_lockout_frames = ACTOR_LEDGE_REGRAB_LOCKOUT_FRAMES_DEFAULT;
 
     slope_max_angle = ACTOR_SLOPE_MAX_ANGLE_DEFAULT;
     slope_snap_distance = ACTOR_SLOPE_SNAP_DISTANCE_DEFAULT;
@@ -197,6 +205,7 @@ function ActorController() constructor {
 
     state = ActorMoveState.AIRBORNE;
     state_previous = ActorMoveState.AIRBORNE;
+    time_in_state = 0;
     facing = ActorFacing.RIGHT;
 
     is_grounded = false;
@@ -220,6 +229,25 @@ function ActorController() constructor {
     wall_coyote_normal_y = 0;
     wall_coyote_object = noone;
     wall_slide_speed = ACTOR_WALL_SLIDE_SPEED_DEFAULT;
+    ledge_candidate = noone;
+    ledge_coyote_candidate = noone;
+    ledge_x = 0;
+    ledge_y = 0;
+    ledge_normal_x = 0;
+    ledge_normal_y = 0;
+    ledge_object = noone;
+    ledge_hang_x = 0;
+    ledge_hang_y = 0;
+    ledge_stand_x = 0;
+    ledge_stand_y = 0;
+    ledge_grab_check_speed = 0;
+    ledge_grab_check_vsp = 0;
+    mantle_start_x = 0;
+    mantle_start_y = 0;
+    mantle_end_x = 0;
+    mantle_end_y = 0;
+    mantle_timer = 0;
+    mantle_duration = ACTOR_LEDGE_MANTLE_FRAMES_DEFAULT;
 
     jump_buffer_timer = 0;
     ground_coyote_timer = 0;
@@ -227,6 +255,7 @@ function ActorController() constructor {
     ledge_coyote_timer = 0;
     drop_through_timer = 0;
     wall_jump_lockout_timer = 0;
+    ledge_grab_lockout_timer = 0;
 
     platform_object = noone;
     platform_velocity_x = 0;

@@ -837,6 +837,20 @@ function actor_collision_get_wall_info(_actor, _direction) {
     return actor_collision_get_contact_info(_actor, ActorCollisionSide.RIGHT);
 }
 
+/// @function actor_collision_can_stand_at
+/// @description Checks whether the actor's standing collision box is clear at a proposed center.
+/// @param {Struct} _actor Actor controller to test.
+/// @param {Real} _x Proposed actor center x position.
+/// @param {Real} _y Proposed actor center y position.
+/// @returns {Bool} True when the standing collision box does not overlap a solid.
+function actor_collision_can_stand_at(_actor, _x, _y) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    return !actor_collision_place_solid(_actor, _x, _y);
+}
+
 /// @function actor_collision_can_stand
 /// @description Checks whether the actor's standing collision box is clear at its current center.
 /// @param {Struct} _actor Actor controller to test.
@@ -846,7 +860,7 @@ function actor_collision_can_stand(_actor) {
         return false;
     }
 
-    return !actor_collision_place_solid(_actor, _actor.x, _actor.y);
+    return actor_collision_can_stand_at(_actor, _actor.x, _actor.y);
 }
 
 /// @function actor_collision_try_unstuck

@@ -44,6 +44,12 @@ function actor_controller_update(_actor, _input) {
     actor_controller_update_wall_contact(_actor);
     var _had_jump_buffer_on_step_start = _actor.jump_buffer_timer > 0;
     actor_controller_update_timers(_actor);
+
+    if (actor_controller_update_ledge_state(_actor)) {
+        actor_controller_end_step(_actor);
+        return _actor;
+    }
+
     actor_controller_try_start_drop_through(_actor);
     actor_controller_update_forces(_actor);
     actor_controller_apply_platform_carry(_actor);
@@ -59,7 +65,15 @@ function actor_controller_update(_actor, _input) {
     actor_controller_apply_wall_slide_cap(_actor);
     actor_controller_apply_velocity_limits(_actor);
     actor_controller_update_total_velocity(_actor);
+    _actor.ledge_grab_check_speed = point_distance(0, 0, _actor.total_hsp, _actor.total_vsp);
+    _actor.ledge_grab_check_vsp = _actor.total_vsp;
     actor_collision_move_and_slide(_actor, _actor.total_hsp, _actor.total_vsp);
+
+    if (actor_controller_try_ledge_grab(_actor)) {
+        actor_controller_end_step(_actor);
+        return _actor;
+    }
+
     actor_controller_handle_landing(_actor);
     actor_controller_try_landing_buffered_jump(_actor, _had_jump_buffer_on_step_start);
     actor_controller_try_enter_wall_slide(_actor);
@@ -116,6 +130,7 @@ function actor_controller_end_step(_actor) {
     }
     actor_controller_update_one_way_ignore(_actor);
     actor_controller_update_total_velocity(_actor);
+    _actor.time_in_state += 1;
     _actor.step_index += 1;
 }
 
