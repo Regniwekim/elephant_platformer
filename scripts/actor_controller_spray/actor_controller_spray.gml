@@ -22,6 +22,20 @@ function actor_controller_has_spray_ability(_actor) {
     return (_abilities & ACTOR_ABILITY_SPRAY) != 0;
 }
 
+/// @function actor_controller_has_charged_spray_ability
+/// @description Reports whether an actor's stats allow charged spray releases.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when both spray and charged spray ability flags are present.
+function actor_controller_has_charged_spray_ability(_actor) {
+    if (!actor_controller_has_spray_ability(_actor)) {
+        return false;
+    }
+
+    var _abilities = actor_stats_get_optional(_actor.stats, "abilities", ACTOR_ABILITY_NONE);
+
+    return (_abilities & ACTOR_ABILITY_CHARGE_SPRAY) != 0;
+}
+
 /// @function actor_controller_get_spray_stats
 /// @description Gets mode-specific water cost and recoil tuning for continuous spray.
 /// @param {Struct} _actor Actor controller containing stats.
@@ -229,6 +243,50 @@ function actor_controller_apply_spray_cost(_actor) {
     return false;
 }
 
+/// @function actor_controller_filter_grounded_spray_lift
+/// @description Removes the away-from-ground component from spray recoil while preserving tangent movement.
+/// @param {Struct} _actor Actor controller receiving recoil.
+/// @param {Real} _recoil_x Raw horizontal recoil.
+/// @param {Real} _recoil_y Raw vertical recoil.
+/// @returns {Struct} Filtered recoil with x and y fields.
+function actor_controller_filter_grounded_spray_lift(_actor, _recoil_x, _recoil_y) {
+    var _filtered = {
+        x: _recoil_x,
+        y: _recoil_y
+    };
+
+    if (!is_struct(_actor) || !_actor.is_physically_grounded) {
+        return _filtered;
+    }
+
+    var _normal_x = _actor.ground_normal_x;
+    var _normal_y = _actor.ground_normal_y;
+    var _normal_length = point_distance(0, 0, _normal_x, _normal_y);
+
+    if ((_normal_length <= ACTOR_EPSILON) || (_normal_y > ACTOR_EPSILON)) {
+        _normal_x = 0;
+        _normal_y = -1;
+    } else {
+        _normal_x /= _normal_length;
+        _normal_y /= _normal_length;
+    }
+
+    var _away_from_ground = (_filtered.x * _normal_x) + (_filtered.y * _normal_y);
+    if (_away_from_ground > ACTOR_EPSILON) {
+        _filtered.x -= _normal_x * _away_from_ground;
+        _filtered.y -= _normal_y * _away_from_ground;
+    }
+
+    if (abs(_filtered.x) <= ACTOR_EPSILON) {
+        _filtered.x = 0;
+    }
+    if (abs(_filtered.y) <= ACTOR_EPSILON) {
+        _filtered.y = 0;
+    }
+
+    return _filtered;
+}
+
 /// @function actor_controller_apply_spray_recoil
 /// @description Adds continuous spray recoil through the external force stack.
 /// @param {Struct} _actor Actor controller receiving recoil.
@@ -242,10 +300,16 @@ function actor_controller_apply_spray_recoil(_actor) {
     var _surface_recoil = actor_controller_get_surface_multiplier(_actor, "recoil_multiplier");
     var _strength = _spray_stats.recoil_strength * _surface_recoil;
 
-    _actor.spray_recoil_x = -_actor.spray_aim_x * _strength;
-    _actor.spray_recoil_y = -_actor.spray_aim_y * _strength;
+    var _filtered_recoil = actor_controller_filter_grounded_spray_lift(
+        _actor,
+        -_actor.spray_aim_x * _strength,
+        -_actor.spray_aim_y * _strength
+    );
 
-    if (_strength <= ACTOR_EPSILON) {
+    _actor.spray_recoil_x = _filtered_recoil.x;
+    _actor.spray_recoil_y = _filtered_recoil.y;
+
+    if (point_distance(0, 0, _actor.spray_recoil_x, _actor.spray_recoil_y) <= ACTOR_EPSILON) {
         return noone;
     }
 
@@ -266,6 +330,250 @@ function actor_controller_apply_spray_recoil(_actor) {
     );
 
     return actor_controller_add_force(_actor, _force);
+}
+
+/// @function actor_controller_update_charge_flags
+/// @description Refreshes normalized charge amount and readiness flags from charge timer state.
+/// @param {Struct} _actor Actor controller with charge fields.
+/// @returns {Real} Normalized charge amount after refresh.
+function actor_controller_update_charge_flags(_actor) {
+    if (!is_struct(_actor)) {
+        return 0;
+    }
+
+    var _build_frames = max(1, floor(actor_stats_get_optional(_actor.stats, "charge_build_frames", ACTOR_CHARGE_BUILD_FRAMES_DEFAULT)));
+    var _threshold = clamp(actor_stats_get_optional(_actor.stats, "ground_launch_charge_min", ACTOR_GROUND_LAUNCH_CHARGE_MIN_DEFAULT), 0, 1);
+
+    _actor.charge_timer = clamp(floor(_actor.charge_timer), 0, _build_frames);
+    _actor.charge_amount = clamp(_actor.charge_timer / _build_frames, 0, 1);
+    _actor.charge_ready = (_actor.charge_amount > ACTOR_EPSILON) && (_actor.charge_amount >= _threshold - ACTOR_EPSILON);
+    _actor.charge_overready = _actor.charge_amount >= 1 - ACTOR_EPSILON;
+
+    return _actor.charge_amount;
+}
+
+/// @function actor_controller_reset_charge
+/// @description Clears charged spray buildup state.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Undefined} No return value.
+function actor_controller_reset_charge(_actor) {
+    if (!is_struct(_actor)) {
+        return;
+    }
+
+    _actor.charge_timer = 0;
+    _actor.charge_amount = 0;
+    _actor.charge_ready = false;
+    _actor.charge_overready = false;
+}
+
+/// @function actor_controller_can_ground_launch_from_charge
+/// @description Reports whether the current charge amount meets the grounded launch threshold.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when the actor is physically grounded and charge is at or above threshold.
+function actor_controller_can_ground_launch_from_charge(_actor) {
+    if (!is_struct(_actor) || !_actor.is_physically_grounded) {
+        return false;
+    }
+
+    var _threshold = clamp(actor_stats_get_optional(_actor.stats, "ground_launch_charge_min", ACTOR_GROUND_LAUNCH_CHARGE_MIN_DEFAULT), 0, 1);
+
+    return (_actor.charge_amount > ACTOR_EPSILON) && (_actor.charge_amount >= _threshold - ACTOR_EPSILON);
+}
+
+/// @function actor_controller_can_release_charged_shot
+/// @description Checks ability, built charge, and water cost for a charged spray release.
+/// @param {Struct} _actor Actor controller to inspect.
+/// @returns {Bool} True when a charged shot may release this frame.
+function actor_controller_can_release_charged_shot(_actor) {
+    if (!is_struct(_actor) || !actor_controller_has_charged_spray_ability(_actor)) {
+        return false;
+    }
+
+    if (_actor.charge_amount <= ACTOR_EPSILON) {
+        return false;
+    }
+
+    var _cost = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_cost", ACTOR_CHARGED_SHOT_COST_DEFAULT));
+
+    return _actor.water_current + ACTOR_EPSILON >= _cost;
+}
+
+/// @function actor_controller_release_charged_shot
+/// @description Releases a charged spray shot as an impulse and applies grounded launch threshold rules.
+/// @param {Struct} _actor Actor controller releasing the shot.
+/// @returns {Bool} True when water was spent and release event was recorded.
+function actor_controller_release_charged_shot(_actor) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    if (!actor_controller_has_charged_spray_ability(_actor)) {
+        actor_controller_reset_charge(_actor);
+        return false;
+    }
+
+    actor_controller_update_charge_flags(_actor);
+
+    var _charge_amount = clamp(_actor.charge_amount, 0, 1);
+    if (_charge_amount <= ACTOR_EPSILON) {
+        actor_controller_reset_charge(_actor);
+        return false;
+    }
+
+    var _cost = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_cost", ACTOR_CHARGED_SHOT_COST_DEFAULT));
+    if (!actor_controller_can_release_charged_shot(_actor)) {
+        var _dry_event = actor_controller_record_event(_actor, ActorControllerEvent.NO_WATER);
+        if (is_struct(_dry_event)) {
+            _dry_event.spray_mode = ActorSprayMode.CHARGED;
+            _dry_event.charge_amount = _charge_amount;
+            _dry_event.water_cost = _cost;
+            _dry_event.water_current = _actor.water_current;
+        }
+
+        actor_controller_reset_charge(_actor);
+        return false;
+    }
+
+    _actor.water_current = max(0, _actor.water_current - _cost);
+
+    var _impulse = max(0, actor_stats_get_optional(_actor.stats, "charged_shot_impulse", ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT)) * _charge_amount;
+    var _force_x = -_actor.spray_aim_x * _impulse;
+    var _force_y = -_actor.spray_aim_y * _impulse;
+    var _ground_launch_allowed = actor_controller_can_ground_launch_from_charge(_actor);
+    var _ground_launch_applied = false;
+
+    if (_actor.is_physically_grounded && !_ground_launch_allowed) {
+        var _filtered_force = actor_controller_filter_grounded_spray_lift(_actor, _force_x, _force_y);
+        _force_x = _filtered_force.x;
+        _force_y = _filtered_force.y;
+    } else if (_actor.is_physically_grounded) {
+        var _normal_x = _actor.ground_normal_x;
+        var _normal_y = _actor.ground_normal_y;
+        var _normal_length = point_distance(0, 0, _normal_x, _normal_y);
+
+        if ((_normal_length <= ACTOR_EPSILON) || (_normal_y > ACTOR_EPSILON)) {
+            _normal_x = 0;
+            _normal_y = -1;
+        } else {
+            _normal_x /= _normal_length;
+            _normal_y /= _normal_length;
+        }
+
+        _ground_launch_applied = ((_force_x * _normal_x) + (_force_y * _normal_y)) > ACTOR_EPSILON;
+
+        if (_ground_launch_applied) {
+            _actor.is_grounded = false;
+            _actor.is_physically_grounded = false;
+            _actor.ground_object = noone;
+            _actor.platform_object = noone;
+            _actor.platform_inherit_object = noone;
+            _actor.platform_inherit_velocity_x = 0;
+            _actor.platform_inherit_velocity_y = 0;
+            _actor.contact_bottom = actor_collision_reset_contact(_actor.contact_bottom);
+            actor_controller_set_state(_actor, ActorMoveState.AIRBORNE);
+        }
+    }
+
+    _actor.spray_recoil_x = _force_x;
+    _actor.spray_recoil_y = _force_y;
+
+    if (point_distance(0, 0, _force_x, _force_y) > ACTOR_EPSILON) {
+        var _duration = max(1, floor(actor_stats_get_optional(_actor.stats, "charged_shot_duration_frames", ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT)));
+        var _damping = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_damping", ACTOR_CHARGED_SHOT_DAMPING_DEFAULT), 0, 1);
+        var _control_reduction = clamp(actor_stats_get_optional(_actor.stats, "charged_shot_control_reduction", ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT), 0, 1);
+        var _source_id = is_struct(_actor.input) ? _actor.input.source_id : noone;
+        var _metadata = {
+            spray_mode: ActorSprayMode.CHARGED,
+            charge_amount: _charge_amount,
+            ground_launch_allowed: _ground_launch_allowed,
+            ground_launch_applied: _ground_launch_applied
+        };
+
+        actor_controller_add_force(_actor, actor_force_create(
+            ActorForceType.IMPULSE,
+            _force_x,
+            _force_y,
+            _duration,
+            _damping,
+            _control_reduction,
+            _source_id,
+            _metadata
+        ));
+    }
+
+    var _event = actor_controller_record_event(_actor, ActorControllerEvent.CHARGE_RELEASE);
+    if (is_struct(_event)) {
+        _event.spray_mode = ActorSprayMode.CHARGED;
+        _event.charge_amount = _charge_amount;
+        _event.water_cost = _cost;
+        _event.impulse_x = _force_x;
+        _event.impulse_y = _force_y;
+        _event.ground_launch_allowed = _ground_launch_allowed;
+        _event.ground_launch_applied = _ground_launch_applied;
+    }
+
+    actor_controller_reset_charge(_actor);
+    return true;
+}
+
+/// @function actor_controller_update_charge
+/// @description Updates charged spray buildup, release, cancel, and feedback events from input data.
+/// @param {Struct} _actor Actor controller to update.
+/// @returns {Bool} True when charge input was handled and continuous spray should be skipped.
+function actor_controller_update_charge(_actor) {
+    if (!is_struct(_actor) || !is_struct(_actor.input)) {
+        return false;
+    }
+
+    if (!actor_controller_has_charged_spray_ability(_actor)) {
+        actor_controller_reset_charge(_actor);
+        return false;
+    }
+
+    var _input = _actor.input;
+    var _has_charge = (_actor.charge_timer > 0) || (_actor.charge_amount > ACTOR_EPSILON);
+
+    if (_input.cancel_pressed && _has_charge) {
+        actor_controller_reset_charge(_actor);
+        return true;
+    }
+
+    if (_input.charge_released) {
+        if (_has_charge) {
+            actor_controller_release_charged_shot(_actor);
+        }
+
+        return true;
+    }
+
+    if (!_input.charge_pressed && !_input.charge_held) {
+        return false;
+    }
+
+    var _was_charging = _has_charge;
+    var _was_full = _actor.charge_overready;
+    var _build_frames = max(1, floor(actor_stats_get_optional(_actor.stats, "charge_build_frames", ACTOR_CHARGE_BUILD_FRAMES_DEFAULT)));
+
+    if (!_was_charging) {
+        var _start_event = actor_controller_record_event(_actor, ActorControllerEvent.CHARGE_START);
+        if (is_struct(_start_event)) {
+            _start_event.spray_mode = ActorSprayMode.CHARGED;
+        }
+    }
+
+    _actor.charge_timer = min(_build_frames, _actor.charge_timer + 1);
+    actor_controller_update_charge_flags(_actor);
+
+    if (!_was_full && _actor.charge_overready) {
+        var _full_event = actor_controller_record_event(_actor, ActorControllerEvent.CHARGE_FULL);
+        if (is_struct(_full_event)) {
+            _full_event.spray_mode = ActorSprayMode.CHARGED;
+            _full_event.charge_amount = _actor.charge_amount;
+        }
+    }
+
+    return true;
 }
 
 /// @function actor_controller_record_refill_events
@@ -382,6 +690,24 @@ function actor_controller_update_spray(_actor) {
     if (!is_struct(_actor.input)) {
         actor_controller_stop_spray(_actor);
         return;
+    }
+
+    if (actor_controller_has_charged_spray_ability(_actor)) {
+        var _has_charge_state = (_actor.charge_timer > 0) || (_actor.charge_amount > ACTOR_EPSILON);
+        var _has_charge_input = _actor.input.charge_pressed
+            || _actor.input.charge_held
+            || _actor.input.charge_released
+            || (_actor.input.cancel_pressed && _has_charge_state);
+
+        if (_has_charge_input) {
+            actor_controller_stop_spray(_actor);
+        }
+
+        if (actor_controller_update_charge(_actor)) {
+            return;
+        }
+    } else {
+        actor_controller_update_charge(_actor);
     }
 
     var _wants_spray = _actor.input.spray_held || _actor.input.spray_pressed;

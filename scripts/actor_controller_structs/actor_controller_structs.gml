@@ -55,6 +55,12 @@ function ActorStats() constructor {
     water_refill_rate = ACTOR_WATER_REFILL_RATE_DEFAULT;
     spray_ground_lift_suppressed = ACTOR_SPRAY_GROUND_LIFT_SUPPRESS;
     ground_launch_charge_min = ACTOR_GROUND_LAUNCH_CHARGE_MIN_DEFAULT;
+    charge_build_frames = ACTOR_CHARGE_BUILD_FRAMES_DEFAULT;
+    charged_shot_cost = ACTOR_CHARGED_SHOT_COST_DEFAULT;
+    charged_shot_impulse = ACTOR_CHARGED_SHOT_IMPULSE_DEFAULT;
+    charged_shot_duration_frames = ACTOR_CHARGED_SHOT_DURATION_FRAMES_DEFAULT;
+    charged_shot_damping = ACTOR_CHARGED_SHOT_DAMPING_DEFAULT;
+    charged_shot_control_reduction = ACTOR_CHARGED_SHOT_CONTROL_REDUCTION_DEFAULT;
 
     abilities = ACTOR_ABILITY_JUMP;
 

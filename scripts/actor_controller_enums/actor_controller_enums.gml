@@ -86,5 +86,6 @@ enum ActorControllerEvent {
     REFILL_FULL,
     HIT,
     DEATH,
-    RESPAWN
+    RESPAWN,
+    NO_WATER
 }
