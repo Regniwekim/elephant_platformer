@@ -45,10 +45,21 @@ function actor_controller_update_coyote_timers(_actor) {
 
     if (_actor.is_physically_grounded) {
         _actor.ground_coyote_timer = actor_controller_get_timer_stat(_actor, "ground_coyote_frames", ACTOR_GROUND_COYOTE_FRAMES_DEFAULT);
+        _actor.wall_coyote_timer = 0;
+        _actor.wall_coyote_normal_x = 0;
+        _actor.wall_coyote_normal_y = 0;
+        _actor.wall_coyote_object = noone;
     }
 
-    if (_actor.wall_left || _actor.wall_right) {
+    if (!_actor.is_physically_grounded && (_actor.wall_left || _actor.wall_right)) {
         _actor.wall_coyote_timer = actor_controller_get_timer_stat(_actor, "wall_coyote_frames", ACTOR_WALL_COYOTE_FRAMES_DEFAULT);
+        return;
+    }
+
+    if (_actor.wall_coyote_timer <= 0) {
+        _actor.wall_coyote_normal_x = 0;
+        _actor.wall_coyote_normal_y = 0;
+        _actor.wall_coyote_object = noone;
     }
 }
 

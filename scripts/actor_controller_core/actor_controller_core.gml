@@ -41,23 +41,28 @@ function actor_controller_update(_actor, _input) {
 
     actor_controller_begin_step(_actor, _input);
     actor_controller_update_one_way_ignore(_actor);
+    actor_controller_update_wall_contact(_actor);
     var _had_jump_buffer_on_step_start = _actor.jump_buffer_timer > 0;
     actor_controller_update_timers(_actor);
     actor_controller_try_start_drop_through(_actor);
     actor_controller_update_forces(_actor);
     actor_controller_apply_platform_carry(_actor);
     actor_collision_try_unstuck(_actor);
+    actor_controller_try_wall_jump(_actor);
     actor_controller_try_jump(_actor);
     actor_controller_update_spray(_actor);
     actor_controller_apply_external_forces(_actor);
     actor_controller_apply_movement_intent(_actor);
     actor_controller_apply_jump_cut(_actor);
     actor_controller_apply_gravity(_actor);
+    actor_controller_try_enter_wall_slide(_actor);
+    actor_controller_apply_wall_slide_cap(_actor);
     actor_controller_apply_velocity_limits(_actor);
     actor_controller_update_total_velocity(_actor);
     actor_collision_move_and_slide(_actor, _actor.total_hsp, _actor.total_vsp);
     actor_controller_handle_landing(_actor);
     actor_controller_try_landing_buffered_jump(_actor, _had_jump_buffer_on_step_start);
+    actor_controller_try_enter_wall_slide(_actor);
     actor_controller_update_state(_actor);
     actor_controller_end_step(_actor);
 
@@ -243,9 +248,14 @@ function actor_controller_apply_movement_intent(_actor) {
 
     if (_actor.is_physically_grounded) {
         actor_controller_apply_ground_movement(_actor);
-    } else {
-        actor_controller_apply_air_movement(_actor);
+        return;
     }
+
+    if (_actor.wall_jump_lockout_timer > 0) {
+        return;
+    }
+
+    actor_controller_apply_air_movement(_actor);
 }
 
 /// @function actor_controller_apply_ground_movement
