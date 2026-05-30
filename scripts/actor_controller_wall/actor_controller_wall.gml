@@ -116,6 +116,10 @@ function actor_controller_can_wall_slide(_actor) {
         return false;
     }
 
+    if (variable_struct_exists(_actor, "slide_active") && _actor.slide_active) {
+        return false;
+    }
+
     switch (_actor.state) {
         case ActorMoveState.DEAD:
         case ActorMoveState.LOCKED:
@@ -123,6 +127,7 @@ function actor_controller_can_wall_slide(_actor) {
         case ActorMoveState.KNOCKBACK:
         case ActorMoveState.MANTLE:
         case ActorMoveState.LEDGE_GRAB:
+        case ActorMoveState.SLIDE:
             return false;
     }
 
@@ -217,6 +222,10 @@ function actor_controller_can_wall_jump(_actor) {
         return false;
     }
 
+    if (variable_struct_exists(_actor, "slide_active") && _actor.slide_active) {
+        return false;
+    }
+
     if ((_actor.jump_buffer_timer <= 0) || (_actor.wall_jump_lockout_timer > 0)) {
         return false;
     }
@@ -228,6 +237,7 @@ function actor_controller_can_wall_jump(_actor) {
         case ActorMoveState.KNOCKBACK:
         case ActorMoveState.MANTLE:
         case ActorMoveState.LEDGE_GRAB:
+        case ActorMoveState.SLIDE:
             return false;
     }
 

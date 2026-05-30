@@ -55,6 +55,12 @@ function actor_controller_update_state(_actor) {
         case ActorMoveState.MANTLE:
         case ActorMoveState.LEDGE_GRAB:
             return;
+
+        case ActorMoveState.SLIDE:
+            if (_actor.slide_active) {
+                return;
+            }
+            break;
     }
 
     if (_actor.is_physically_grounded) {
@@ -85,6 +91,9 @@ function actor_controller_can_enter_state(_actor, _state) {
 
         case ActorMoveState.WALL_SLIDE:
             return actor_controller_can_wall_slide(_actor);
+
+        case ActorMoveState.SLIDE:
+            return variable_struct_exists(_actor, "slide_active") && _actor.slide_active;
 
         case ActorMoveState.LEDGE_GRAB:
             return is_struct(_actor.stats)

@@ -159,6 +159,9 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     var _release_timer = actor_controller_is_charged_shot_releasing(_actor)
         ? min(_release_duration, _actor.charged_shot_release_timer + 1)
         : _actor.charged_shot_release_timer;
+    var _collision_height = actor_collision_get_actor_height(_actor);
+    var _standing_height = actor_collision_get_actor_standing_height(_actor);
+    var _slide_height = actor_controller_get_slide_height(_actor);
     var _text = "";
 
     _text += "Actor Controller " + string(_actor.version) + "\n";
@@ -210,6 +213,13 @@ function actor_controller_debug_print_state(_actor, _draw_x, _draw_y) {
     _text += " unstuck: " + actor_controller_debug_bool_text(_actor.collision_unstuck_succeeded);
     _text += " (" + actor_controller_debug_format_real(_actor.collision_unstuck_offset_x);
     _text += ", " + actor_controller_debug_format_real(_actor.collision_unstuck_offset_y) + ")\n";
+    _text += "slide: " + actor_controller_debug_bool_text(_actor.slide_active);
+    _text += " blocked stand: " + actor_controller_debug_bool_text(_actor.slide_stand_blocked);
+    _text += " timer: " + string(_actor.slide_timer);
+    _text += " entry: " + actor_controller_debug_format_real(_actor.slide_entry_speed);
+    _text += " height c/s/sl: " + actor_controller_debug_format_real(_collision_height);
+    _text += "/" + actor_controller_debug_format_real(_standing_height);
+    _text += "/" + actor_controller_debug_format_real(_slide_height) + "\n";
     _text += "timers jump/coyote/wall/ledge/drop/wlock/llock: ";
     _text += string(_actor.jump_buffer_timer) + "/";
     _text += string(_actor.ground_coyote_timer) + "/";
@@ -337,6 +347,26 @@ function actor_controller_debug_draw_probes(_actor) {
     actor_controller_debug_draw_rect(_top, _actor.contact_top.active ? c_yellow : c_olive);
     actor_controller_debug_draw_rect(_left, _actor.contact_left.active ? c_red : c_maroon);
     actor_controller_debug_draw_rect(_right, _actor.contact_right.active ? c_red : c_maroon);
+
+    if (_actor.slide_active) {
+        var _standing_height = actor_collision_get_actor_standing_height(_actor);
+        var _clearance = actor_controller_get_slide_stat(
+            _actor,
+            "slide_ceiling_clearance",
+            ACTOR_SLIDE_CEILING_CLEARANCE_DEFAULT
+        );
+        var _clearance_height = _standing_height + _clearance;
+        var _feet_y = actor_collision_get_actor_feet_y(_actor);
+        var _clearance_y = actor_collision_get_center_y_for_height(_feet_y, _clearance_height);
+        var _stand_clearance = actor_collision_get_actor_rect_with_height(
+            _actor,
+            _actor.x,
+            _clearance_y,
+            _clearance_height
+        );
+
+        actor_controller_debug_draw_rect(_stand_clearance, _actor.slide_stand_blocked ? c_red : c_yellow);
+    }
 
     if (is_struct(_actor.ledge_candidate) && _actor.ledge_candidate.active) {
         var _ledge_hang = actor_collision_get_actor_rect(_actor, _actor.ledge_candidate.hang_x, _actor.ledge_candidate.hang_y);

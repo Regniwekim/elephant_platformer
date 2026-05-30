@@ -34,6 +34,15 @@ function actor_input_frame_normalize(_frame) {
     if (!variable_struct_exists(_frame, "run_released")) {
         _frame.run_released = false;
     }
+    if (!variable_struct_exists(_frame, "slide_pressed")) {
+        _frame.slide_pressed = false;
+    }
+    if (!variable_struct_exists(_frame, "slide_held")) {
+        _frame.slide_held = false;
+    }
+    if (!variable_struct_exists(_frame, "slide_released")) {
+        _frame.slide_released = false;
+    }
     if (!variable_struct_exists(_frame, "debug_unlimited_capacity_toggle_pressed")) {
         _frame.debug_unlimited_capacity_toggle_pressed = false;
     }

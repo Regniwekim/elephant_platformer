@@ -233,6 +233,10 @@ function actor_controller_can_ledge_grab(_actor) {
         return false;
     }
 
+    if (variable_struct_exists(_actor, "slide_active") && _actor.slide_active) {
+        return false;
+    }
+
     if (_actor.is_physically_grounded || (_actor.ledge_grab_lockout_timer > 0)) {
         return false;
     }
@@ -244,6 +248,7 @@ function actor_controller_can_ledge_grab(_actor) {
         case ActorMoveState.KNOCKBACK:
         case ActorMoveState.MANTLE:
         case ActorMoveState.LEDGE_GRAB:
+        case ActorMoveState.SLIDE:
             return false;
     }
 

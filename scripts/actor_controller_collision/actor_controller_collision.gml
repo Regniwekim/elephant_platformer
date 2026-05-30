@@ -1,14 +1,83 @@
 /// @description Flat solid collision helpers for the generic actor controller.
 
-/// @function actor_collision_get_actor_rect
-/// @description Builds the centered actor collision rectangle for a proposed position.
+/// @function actor_collision_get_actor_standing_height
+/// @description Gets the actor's full standing collision height from stats.
 /// @param {Struct} _actor Actor controller containing collision stats.
+/// @returns {Real} Positive standing collision height.
+function actor_collision_get_actor_standing_height(_actor) {
+    if (!is_struct(_actor) || !is_struct(_actor.stats)) {
+        return ACTOR_EPSILON;
+    }
+
+    return max(ACTOR_EPSILON, actor_stats_get_optional(_actor.stats, "bbox_height", ACTOR_EPSILON));
+}
+
+/// @function actor_collision_get_actor_height
+/// @description Gets the actor's current runtime collision height.
+/// @param {Struct} _actor Actor controller containing collision state.
+/// @returns {Real} Positive current collision height.
+function actor_collision_get_actor_height(_actor) {
+    var _standing_height = actor_collision_get_actor_standing_height(_actor);
+
+    if (!is_struct(_actor) || !variable_struct_exists(_actor, "collision_height")) {
+        return _standing_height;
+    }
+
+    if (_actor.collision_height <= ACTOR_EPSILON) {
+        return _standing_height;
+    }
+
+    return max(ACTOR_EPSILON, _actor.collision_height);
+}
+
+/// @function actor_collision_get_actor_feet_y
+/// @description Gets the world y coordinate of the actor collision box bottom.
+/// @param {Struct} _actor Actor controller containing position and collision height.
+/// @returns {Real} Actor collision bottom y coordinate.
+function actor_collision_get_actor_feet_y(_actor) {
+    if (!is_struct(_actor)) {
+        return 0;
+    }
+
+    return _actor.y + (actor_collision_get_actor_height(_actor) * 0.5);
+}
+
+/// @function actor_collision_get_center_y_for_height
+/// @description Converts a feet y coordinate and collision height into a centered actor y coordinate.
+/// @param {Real} _feet_y Desired collision bottom y coordinate.
+/// @param {Real} _height Collision height to center above the feet.
+/// @returns {Real} Center y coordinate for the requested height.
+function actor_collision_get_center_y_for_height(_feet_y, _height) {
+    return _feet_y - (max(ACTOR_EPSILON, _height) * 0.5);
+}
+
+/// @function actor_collision_set_actor_height_keep_feet
+/// @description Changes runtime collision height while preserving the actor's current feet position.
+/// @param {Struct} _actor Actor controller to resize.
+/// @param {Real} _height New collision height.
+/// @returns {Real} Applied positive collision height.
+function actor_collision_set_actor_height_keep_feet(_actor, _height) {
+    if (!is_struct(_actor)) {
+        return 0;
+    }
+
+    var _feet_y = actor_collision_get_actor_feet_y(_actor);
+    _actor.collision_height = max(ACTOR_EPSILON, _height);
+    _actor.y = actor_collision_get_center_y_for_height(_feet_y, _actor.collision_height);
+
+    return _actor.collision_height;
+}
+
+/// @function actor_collision_get_actor_rect_with_height
+/// @description Builds a centered actor collision rectangle with an explicit height.
+/// @param {Struct} _actor Actor controller containing collision width stats.
 /// @param {Real} _x Proposed actor center x position.
 /// @param {Real} _y Proposed actor center y position.
+/// @param {Real} _height Explicit collision height to use.
 /// @returns {Struct} Rectangle with left, top, right, and bottom fields.
-function actor_collision_get_actor_rect(_actor, _x, _y) {
+function actor_collision_get_actor_rect_with_height(_actor, _x, _y, _height) {
     var _half_width = _actor.stats.bbox_width * 0.5;
-    var _half_height = _actor.stats.bbox_height * 0.5;
+    var _half_height = max(ACTOR_EPSILON, _height) * 0.5;
     var _rect = {};
 
     _rect.left = _x - _half_width;
@@ -17,6 +86,16 @@ function actor_collision_get_actor_rect(_actor, _x, _y) {
     _rect.bottom = _y + _half_height;
 
     return _rect;
+}
+
+/// @function actor_collision_get_actor_rect
+/// @description Builds the centered actor collision rectangle for a proposed position.
+/// @param {Struct} _actor Actor controller containing collision stats.
+/// @param {Real} _x Proposed actor center x position.
+/// @param {Real} _y Proposed actor center y position.
+/// @returns {Struct} Rectangle with left, top, right, and bottom fields.
+function actor_collision_get_actor_rect(_actor, _x, _y) {
+    return actor_collision_get_actor_rect_with_height(_actor, _x, _y, actor_collision_get_actor_height(_actor));
 }
 
 /// @function actor_collision_get_solid_rect
@@ -191,6 +270,23 @@ function actor_collision_place_solid(_actor, _x, _y) {
     }
 
     return actor_collision_find_solid_hit(_actor, _x, _y) != noone;
+}
+
+/// @function actor_collision_place_solid_with_height
+/// @description Checks solid overlap for a proposed position using an explicit actor collision height.
+/// @param {Struct} _actor Actor controller to test.
+/// @param {Real} _x Proposed actor center x position.
+/// @param {Real} _y Proposed actor center y position.
+/// @param {Real} _height Explicit collision height to test.
+/// @returns {Bool} True when the proposed rectangle overlaps a solid.
+function actor_collision_place_solid_with_height(_actor, _x, _y, _height) {
+    if (!is_struct(_actor)) {
+        return false;
+    }
+
+    var _rect = actor_collision_get_actor_rect_with_height(_actor, _x, _y, _height);
+
+    return actor_collision_find_solid_hit_for_rect(_actor, _rect) != noone;
 }
 
 /// @function actor_collision_find_one_way_hit
@@ -487,7 +583,7 @@ function actor_collision_get_slope_info(_actor, _x, _y) {
     }
 
     var _half_width = _actor.stats.bbox_width * 0.5;
-    var _half_height = _actor.stats.bbox_height * 0.5;
+    var _half_height = actor_collision_get_actor_height(_actor) * 0.5;
     var _actor_bottom = _y + _half_height;
     var _snap_distance = actor_stats_get_optional(_actor.stats, "slope_snap_distance", ACTOR_SLOPE_SNAP_DISTANCE_DEFAULT);
     var _best = actor_collision_make_empty_slope_info();
@@ -584,7 +680,7 @@ function actor_collision_snap_to_ground(_actor, _max_distance) {
         return _result;
     }
 
-    var _target_y = _slope.surface_y - (_actor.stats.bbox_height * 0.5);
+    var _target_y = _slope.surface_y - (actor_collision_get_actor_height(_actor) * 0.5);
     var _snap_y = _target_y - _actor.y;
 
     if (abs(_snap_y) <= ACTOR_EPSILON) {
@@ -848,7 +944,12 @@ function actor_collision_can_stand_at(_actor, _x, _y) {
         return false;
     }
 
-    return !actor_collision_place_solid(_actor, _x, _y);
+    return !actor_collision_place_solid_with_height(
+        _actor,
+        _x,
+        _y,
+        actor_collision_get_actor_standing_height(_actor)
+    );
 }
 
 /// @function actor_collision_can_stand
